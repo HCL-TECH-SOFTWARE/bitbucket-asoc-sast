@@ -1,0 +1,10 @@
+name: ASoC_SAST
+image: cwtravis1/asoc_unofficial:asoc_sast@sha256:6652df0557e4631980ed721df4c2319bc6e9ce09e0a132057ff3ccd2556a4793
+description: This pipe runs a SAST scan on HCL AppScan on Cloud
+repository: 
+maintainer: cody.travis@hcl.com
+tags:
+    - bitbucket-pipelines
+    - pipes
+    - python
+  
