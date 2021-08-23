@@ -44,7 +44,7 @@ pipelines:
         script:
           # Custom Pipe to run Static Analysis via HCL AppScan on Cloud
           # View README: https://github.com/cwtravis/bitbucket-asoc-sast-linux
-          - pipe: docker://cwtravis1/asoc_unofficial:latest
+          - pipe: docker://cwtravis1/bitbucket_asoc_sast:linux
             variables:
               # Required Variables
               API_KEY_ID: $API_KEY_ID
