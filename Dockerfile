@@ -4,6 +4,6 @@ COPY requirements.txt /
 RUN pip install -r /requirements.txt
 
 COPY pipe /
-COPY LICENSE.txt pipe.yml README.md /
+COPY LICENSE pipe.yml README.md /
 
 ENTRYPOINT ["python3", "/RunSAST.py"]
