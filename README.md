@@ -1,4 +1,4 @@
-# Bitbucket Custom Pipe for HCL AppScan on Cloud Static Analysis
+# Bitbucket Pipe for HCL AppScan on Cloud Static Analysis
 This is a linux docker image that uses python to download the SAClientUtil from HCL AppScan on Cloud and run static analysis against an application in Bitbucket pipelines. The script also will wait for the scan to complete and download a scan summary json file and a scan report. These files are all placed in a directory "reports" so they can be saved as artifacts of the pipeline. See the bitbucket-pipelines.yml example below.
 
 ### Variables
