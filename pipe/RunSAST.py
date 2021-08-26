@@ -47,6 +47,11 @@ class AppScanOnCloudSAST(Pipe):
         
         self.asoc = ASoC(apikey)
         logger.info("Executing Pipe: HCL AppScan on Cloud SAST")
+        logger.info("\trev 2021-08-24")
+        if(self.debug):
+            logger.setLevel('DEBUG')
+            logger.info("Debug logging enabled")
+        
         
         #valid chars for a scan name: alphanumeric + [.-_ ]
         scanName = re.sub('[^a-zA-Z0-9\s_\-\.]', '_', scanName)+"_"+self.getTimeStamp()
@@ -66,7 +71,7 @@ class AppScanOnCloudSAST(Pipe):
         #Create the saclient dir if it doesn not exist
         saclientPath = os.path.join(self.cwd, "saclient")
         if(not os.path.isdir(saclientPath)):
-            logger.info(f"SAClient Path [{saclientPath}] does not exist")
+            logger.debug(f"SAClient Path [{saclientPath}] does not exist")
             try:
                 os.mkdir(saclientPath)
                 logger.info(f"Created dir [{saclientPath}]")
@@ -82,7 +87,7 @@ class AppScanOnCloudSAST(Pipe):
         #Create Reports Dir if it does not exist 
         reportsDir = os.path.join(self.cwd, "reports")
         if(not os.path.isdir(reportsDir)):
-            logger.info(f"Reports dir doesn't exists [{reportsDir}]")
+            logger.debug(f"Reports dir doesn't exists [{reportsDir}]")
             os.mkdir(reportsDir)
             if(not os.path.isdir(reportsDir)):
                 logger.error(f"Cannot create reports dir! [{reportsDir}]")
@@ -91,7 +96,7 @@ class AppScanOnCloudSAST(Pipe):
             else:
                 logger.info(f"Created dir [{reportsDir}]")
         #Make sure we have write permission on the reports dir
-        logger.info("Setting permissions on reports dir...")
+        logger.info("Setting permissions on reports dir")
         os.chmod(reportsDir, 755)
         logger.info("========== Step 0: Complete =======================\n")
         
@@ -130,12 +135,24 @@ class AppScanOnCloudSAST(Pipe):
         logger.info("========== Step 4: Fetch Scan Summary =============")      
         summaryFileName = scanName+".json"
         summaryPath = os.path.join(reportsDir, summaryFileName)
-        logger.info("Fetching Scan Summary")
+        logger.debug("Fetching Scan Summary")
         summary = self.getScanSummary(scanId, summaryPath)
         if(summary is None):
             logger.error("Error getting scan summary")
         else:
-            logger.info("Scan Summary:\n"+json.dumps(summary, indent=2))
+            seconds = summary["duration_seconds"] % (24 * 3600)
+            hour = seconds // 3600
+            seconds %= 3600
+            minutes = seconds // 60
+            seconds %= 60
+            durationStr = "%d:%02d:%02d" % (hour, minutes, seconds)
+            logger.info("Scan Summary:")
+            logger.info(f"\tDuration: {durationStr}")
+            logger.info(f'\tTotal Issues: {summary["total_issues"]}')
+            logger.info(f'\t\tHigh Issues: {summary["high_issues"]}')
+            logger.info(f'\t\tMed Issues: {summary["medium_issues"]}')
+            logger.info(f'\t\tLow Issues: {summary["low_issues"]}')
+            logger.debug("Scan Summary:\n"+json.dumps(summary, indent=2))
         logger.info("========== Step 4: Complete =======================\n")
         
 
@@ -198,14 +215,14 @@ class AppScanOnCloudSAST(Pipe):
                 os.chmod(os.path.join(root, f), 755)
         
         #Find the appscan executable
-        logger.info("Finding appscan bin path")
+        logger.debug("Finding appscan bin path")
         appscanPath = None
         dirs = os.listdir(saclientPath)
         for file in dirs:
             appscanPath = os.path.join(self.cwd, saclientPath, file, "bin", "appscan.sh")
             
         if(os.path.exists(appscanPath)):
-            logger.info(f"AppScan Bin Path [{appscanPath}]")
+            logger.debug(f"AppScan Bin Path [{appscanPath}]")
         else:
             logger.error("Something went wrong setting up the SAClientUtil")
             logger.error(f"AppScan Bin [{appscanPath}] not found!")
@@ -217,10 +234,11 @@ class AppScanOnCloudSAST(Pipe):
     #generate IRX file for target directory
     def genIrx(self, scanName, appscanPath, targetPath, reportsDir, configFile=None):
         #Change Working Dir to the target directory
-        logger.info(f"Changing dir to target: [{targetPath}]")
+        logger.debug(f"Changing dir to target: [{targetPath}]")
         os.chdir(targetPath)
+        logger.info("IRX Gen stdout will be saved to [reports]")
         logger.info("Running AppScan Prepare")
-        irxFile = self.asoc.generateIRX(scanName, appscanPath, reportsDir, configFile)
+        irxFile = self.asoc.generateIRX(scanName, appscanPath, reportsDir, configFile, self.debug)
         if(irxFile is None):
             logger.error("IRX Not Generated")
             return None
@@ -229,13 +247,13 @@ class AppScanOnCloudSAST(Pipe):
         logPath = os.path.join(targetPath, scanName+"_logs.zip")
         
         #Change working dir back to the previous current working dir
-        logger.info(f"Changing dir to previous working dir: [{self.cwd}]")
+        logger.debug(f"Changing dir to previous working dir: [{self.cwd}]")
         os.chdir(self.cwd)
         
         #Check if logs dir exists, if it does copy to the reports dir to be saved
         if(os.path.exists(logPath)):
-            logger.info(f"Logs Found [{logPath}]")
-            logger.info("Copying logs to reports dir")
+            logger.debug(f"Logs Found [{logPath}]")
+            logger.debug("Copying logs to reports dir")
             newLogPath = os.path.join(reportsDir, scanName+"_logs.zip")
             res = shutil.copyfile(logPath, newLogPath)
             if(res):
@@ -243,7 +261,7 @@ class AppScanOnCloudSAST(Pipe):
                 
         #Verify the IRX File Exists
         if(os.path.exists(irxPath)):
-            logger.info(f"IRX Path [{irxPath}]")
+            logger.debug(f"IRX Path [{irxPath}]")
             return irxPath
         
         logger.error(f"IRX File does not exist [{irxPath}]")
@@ -253,7 +271,7 @@ class AppScanOnCloudSAST(Pipe):
     #If Wait=True the function will sleep until the scan is complete
     def runScan(self, scanName, appId, irxPath, comment="", wait=True):
         #Verify that ASoC is logged in, if not then login
-        logger.info("Login to ASoC")
+        logger.debug("Login to ASoC")
         if(not self.asoc.checkAuth()):
             if(self.asoc.login()):
                 logger.info("Successfully logged into ASoC API")
@@ -262,7 +280,7 @@ class AppScanOnCloudSAST(Pipe):
                 return None
                
         #Verify that appId exists
-        logger.info(f"Checking AppId [{appId}]")
+        logger.debug(f"Checking AppId [{appId}]")
         app = self.asoc.getApplication(appId)
         if(app):
             appName = app["Name"]
@@ -274,14 +292,14 @@ class AppScanOnCloudSAST(Pipe):
         
         scanName = appName+"_"+scanName
         #Upload the IRX File and get a FileId
-        logger.info("Uploading IRX File")
+        logger.debug("Uploading IRX File")
         fileId = self.asoc.uploadFile(irxPath)
         if(fileId is None):
             logger.error("Error uploading IRX File")
-        logger.info(f"IRX FileId: [{fileId}]")
+        logger.debug(f"IRX FileId: [{fileId}]")
         
         #Run the Scan
-        logger.info("Running Scan")
+        logger.debug("Running Scan")
         scanId = self.asoc.createSastScan(scanName, appId, fileId, comment)
         
         if(scanId):

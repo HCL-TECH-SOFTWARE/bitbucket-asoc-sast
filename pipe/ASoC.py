@@ -40,7 +40,7 @@ class ASoC:
         resp = requests.get("https://cloud.appscan.com/api/V2/Account/TenantInfo", headers=headers)
         return resp.status_code == 200
     
-    def generateIRX(self, scanName, appscanBin, stdoutFilePath = "", configFile=None):
+    def generateIRX(self, scanName, appscanBin, stdoutFilePath = "", configFile=None, printio=True):
         stdoutFile = os.path.join(stdoutFilePath, scanName+'_stdout.txt')
         
         with io.open(stdoutFile, 'wb') as writer, io.open(stdoutFile, 'rb') as reader:
@@ -49,11 +49,14 @@ class ASoC:
             else:
                 process = subprocess.Popen([appscanBin, "prepare", "-n", scanName], stdout=writer)
             while process.poll() is None:
-                sys.stdout.write(reader.read().decode('ascii'))
+                if(printio):
+                    sys.stdout.write(reader.read().decode('ascii'))
                 time.sleep(0.5)
-            sys.stdout.write(str(reader.read().decode('ascii')))
-        sys.stdout.flush()
-        print()
+            if(printio):
+                sys.stdout.write(str(reader.read().decode('ascii')))
+        if(printio):
+            sys.stdout.flush()
+            print()
         irxPath = scanName + ".irx"
         if(os.path.exists(irxPath)):
             return irxPath
