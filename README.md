@@ -105,5 +105,7 @@ Once your images are built, you can use them as in the example pipeline above.
           - reports/*
 ```
 
+### Windows image is still under construction and does not work. 
+
 If you have any questions raise an issue in this repo.
 

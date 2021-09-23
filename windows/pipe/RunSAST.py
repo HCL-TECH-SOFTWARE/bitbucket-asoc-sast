@@ -33,7 +33,7 @@ class AppScanOnCloudSAST(Pipe):
         scanName = self.get_variable('SCAN_NAME')
         apikeyid = self.get_variable('API_KEY_ID')
         apikeysecret = self.get_variable('API_KEY_SECRET')
-        appid = self.get_variable('APP_ID')
+        appId = self.get_variable('APP_ID')
         self.debug = self.get_variable('DEBUG')
         self.cloneDir = self.get_variable('TARGET_DIR')
         repo = self.get_variable('REPO')
@@ -56,7 +56,6 @@ class AppScanOnCloudSAST(Pipe):
         #valid chars for a scan name: alphanumeric + [.-_ ]
         scanName = re.sub('[^a-zA-Z0-9\s_\-\.]', '_', scanName)+"_"+self.getTimeStamp()
         configFile = None
-        appId = "9645f3f2-d116-48ec-8024-864948a86190"
         comment = "This scan was created via API testing BitBucket Pipes"
         
         logger.info("========== Step 0: Preparation ====================")
