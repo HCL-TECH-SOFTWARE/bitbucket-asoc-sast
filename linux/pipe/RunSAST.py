@@ -184,22 +184,20 @@ class AppScanOnCloudSAST(Pipe):
         if(r.status_code != 200):
             logger.error("Invalid HTTP code downloading SAClient Util")
             return False
-        file_size = int(r.headers["content-length"])
-        disposition = r.headers["content-disposition"]
         chunk_size = 4096
         xfered = 0
-        percent = 0
         start = time.time()
         save_path = os.path.join(self.cwd, "saclient.zip")
         with open(save_path, 'wb') as fd:
             for chunk in r.iter_content(chunk_size=chunk_size):
                 fd.write(chunk)
                 xfered += len(chunk)
-                percent = round((xfered/file_size)*100)
+                mb = round(xfered/1048576, 2)
                 if(time.time()-start > 3):
-                    logger.info(f"SAClientUtil Download: {percent}%")
+                    logger.info(f"SAClientUtil Downloading: {mb}MB...")
                     start = time.time()
-        logger.info(f"SAClientUtil Download: {percent}%")
+        mb = round(xfered/1048576, 2)
+        logger.info(f"SAClientUtil Downloaded: {mb}MB")
         
         #Extract the downloaded file
         logger.info("Extracting SAClientUtil Zip")
