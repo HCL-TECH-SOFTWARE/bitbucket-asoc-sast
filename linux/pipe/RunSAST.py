@@ -47,7 +47,7 @@ class AppScanOnCloudSAST(Pipe):
         
         self.asoc = ASoC(apikey)
         logger.info("Executing Pipe: HCL AppScan on Cloud SAST")
-        logger.info("\trev 2021-08-24")
+        logger.info("\trev 2022-10-28")
         if(self.debug):
             logger.setLevel('DEBUG')
             logger.info("Debug logging enabled")
@@ -56,7 +56,6 @@ class AppScanOnCloudSAST(Pipe):
         #valid chars for a scan name: alphanumeric + [.-_ ]
         scanName = re.sub('[^a-zA-Z0-9\s_\-\.]', '_', scanName)+"_"+self.getTimeStamp()
         configFile = None
-        appId = "9645f3f2-d116-48ec-8024-864948a86190"
         comment = "This scan was created via API testing BitBucket Pipes"
         
         logger.info("========== Step 0: Preparation ====================")
@@ -123,7 +122,7 @@ class AppScanOnCloudSAST(Pipe):
         
         #Step 3: Run the Scan
         logger.info("========== Step 3: Run the Scan on ASoC ===========")
-        scanId = self.runScan(scanName, appId, irxPath, comment, True)
+        scanId = self.runScan(scanName, appid, irxPath, comment, True)
         if(scanId is None):
             logger.error("Error creating scan")
             self.fail(message="Error Running ASoC SAST Pipeline")
