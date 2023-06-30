@@ -14,6 +14,7 @@ logger = get_logger()
 schema = {
     'SCAN_NAME': {'type': 'string', 'required': False, 'default': "HCL_ASoC_SAST"},
     'REPO': {'type': 'string', 'required': False, 'default': ""},
+    'CONFIG_FILE_PATH': {'type': 'string', 'required': False, 'default': ""},
     'BUILD_NUM': {'type': 'number', 'required': False, 'default': 0},
     'API_KEY_ID': {'type': 'string', 'required': True},
     'API_KEY_SECRET': {'type': 'string', 'required': True},
@@ -38,7 +39,10 @@ class AppScanOnCloudSAST(Pipe):
         self.cloneDir = self.get_variable('TARGET_DIR')
         repo = self.get_variable('REPO')
         buildNum = self.get_variable('BUILD_NUM')
-        
+        configFile = None
+        if len(self.get_variable('CONFIG_FILE_PATH')) > 0:
+            configFile = self.get_variable('CONFIG_FILE_PATH')
+            
         self.cwd = os.getcwd()
         apikey = {
           "KeyId": apikeyid,
@@ -47,7 +51,7 @@ class AppScanOnCloudSAST(Pipe):
         
         self.asoc = ASoC(apikey)
         logger.info("Executing Pipe: HCL AppScan on Cloud SAST")
-        logger.info("\trev 2022-10-28")
+        logger.info("\trev 2023-06-30")
         if(self.debug):
             logger.setLevel('DEBUG')
             logger.info("Debug logging enabled")
@@ -55,12 +59,25 @@ class AppScanOnCloudSAST(Pipe):
         
         #valid chars for a scan name: alphanumeric + [.-_ ]
         scanName = re.sub('[^a-zA-Z0-9\s_\-\.]', '_', scanName)+"_"+self.getTimeStamp()
-        configFile = None
         comment = "This scan was created via API testing BitBucket Pipes"
         
         logger.info("========== Step 0: Preparation ====================")
         #Copy contents of the clone dir to the target dir
+        logger.info(f"SCAN_NAME: {scanName}")
+        logger.info(f"APP_ID: {appid}")
+        logger.info(f"REPO: {repo}")
+        logger.info(f"BUILD_NUM: {buildNum}")
+        logger.info(f"TARGET_DIR: {self.cloneDir}")
+        logger.info(f"DEBUG: {self.debug}")
+        logger.debug(f"Current Working Dir: {self.cwd}")
         targetDir = os.path.join(self.cwd, "target")
+        logger.debug(f"SCAN TARGET: {targetDir}")
+
+        cwd_dir_list = os.listdir(self.cwd)
+        logger.debug(cwd_dir_list)
+        clone_dir_list = os.listdir(self.cloneDir)
+        logger.debug(clone_dir_list)
+
         logger.info(f"Copying [{self.cwd}] to [{targetDir}]")
         if(shutil.copytree(self.cloneDir, targetDir) is None):
             logger.error("Cannot copy build clone dir into target dir")
@@ -111,7 +128,14 @@ class AppScanOnCloudSAST(Pipe):
         
         #Step 2: Generate the IRX
         logger.info("========== Step 2: Generate IRX File ==============")
-        
+        if configFile is None:
+            logger.info("Config file not specified. Using defaults.")
+        else:
+            if not os.path.exists(configFile):
+                logger.error(f"Config Path Does Not Exist: {configFile}")
+                logger.error(f"Using Default Config: {configFile}")
+                configFile = None
+            
         irxPath = self.genIrx(scanName, appscanPath, targetDir, reportsDir, configFile)
         if(irxPath is None):
             logger.error("IRX File Not Generated.")
@@ -170,6 +194,27 @@ class AppScanOnCloudSAST(Pipe):
             self.fail(message="Error Running ASoC SAST Pipeline")
             return False
         logger.info(f"Report Downloaded [{reportPath}]")
+        report_data = {
+            "type": "report",
+            "uuid": "{asdasd-565656-asdad-565655}",
+            "report_type": "BUG",
+            "external_id": "10",  # required
+            "title": "HCL AppScan on Cloud SAST Report",  # required
+            "details": "Bitbucket Pipeline Static Analysis",  # required
+            "result": "FAILED",
+            "reporter": "HCL AppScan on Cloud",
+            "link": "https://bug-tool.atlassian.com/report/10",
+            "logo_url": "https://bug-tool.atlassian.com/logo.png",
+            "data": [
+                {
+                    "title": "Critical",
+                    "type": "BOOLEAN",
+                    "value": true
+                },
+            ],
+            "created_on": "2020-01-08T00:56:20.593Z",
+            "updated_on": "2020-01-09T12:00:10.123Z"
+        }
         logger.info("========== Step 5: Complete =======================\n")
         
         self.success(message="ASoC SAST Pipeline Complete")
@@ -376,7 +421,8 @@ class AppScanOnCloudSAST(Pipe):
             "scan_id": summary["Id"],
             "createdAt": summary["LatestExecution"]["ExecutionDurationSec"],
             "duration_seconds": summary["LatestExecution"]["ExecutionDurationSec"],
-            "high_issues": summary["LatestExecution"]["NHighIssues"],
+            "critical_issues": summary["LatestExecution"]["ExecutionDurationSec"],
+            "high_issues": summary["LatestExecution"]["NCriticalIssues"],
             "medium_issues": summary["LatestExecution"]["NMediumIssues"],
             "low_issues": summary["LatestExecution"]["NLowIssues"],
             "info_issues": summary["LatestExecution"]["NInfoIssues"],
