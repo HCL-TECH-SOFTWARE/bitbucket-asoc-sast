@@ -1,4 +1,4 @@
-from bitbucket_pipes_toolkit import Pipe, get_logger
+from bitbucket_pipes_toolkit import Pipe, get_logger, CodeInsights
 from ASoC import ASoC
 import requests
 import os
@@ -13,7 +13,6 @@ logger = get_logger()
 
 schema = {
     'SCAN_NAME': {'type': 'string', 'required': False, 'default': "HCL_ASoC_SAST"},
-    'REPO': {'type': 'string', 'required': False, 'default': ""},
     'CONFIG_FILE_PATH': {'type': 'string', 'required': False, 'default': ""},
     'BUILD_NUM': {'type': 'number', 'required': False, 'default': 0},
     'API_KEY_ID': {'type': 'string', 'required': True},
@@ -30,15 +29,26 @@ class AppScanOnCloudSAST(Pipe):
     def run(self):
         super().run()
         
-        #Read Provided Variables from BitBucket
+        # Read Environment Vars
+        env = dict(os.environ)
+
+        # Read Provided Variables from BitBucket Pipeline
         scanName = self.get_variable('SCAN_NAME')
         apikeyid = self.get_variable('API_KEY_ID')
         apikeysecret = self.get_variable('API_KEY_SECRET')
-        appid = self.get_variable('APP_ID')
+        self.appid = self.get_variable('APP_ID')
         self.debug = self.get_variable('DEBUG')
         self.cloneDir = self.get_variable('TARGET_DIR')
-        repo = self.get_variable('REPO')
         buildNum = self.get_variable('BUILD_NUM')
+
+        #Read Variables from the Environment
+        self.repo = env.get('BITBUCKET_REPO_SLUG', "")
+        self.repo_full_name = env.get('BITBUCKET_REPO_FULL_NAME', "")
+        branch = env.get('BITBUCKET_BRANCH', "")
+        self.commit = env.get('BITBUCKET_COMMIT', "")
+        projectKey = env.get('BITBUCKET_PROJECT_KEY', "")
+        self.repoOwner = env.get('BITBUCKET_REPO_OWNER', "")
+
         configFile = None
         if len(self.get_variable('CONFIG_FILE_PATH')) > 0:
             configFile = self.get_variable('CONFIG_FILE_PATH')
@@ -48,7 +58,9 @@ class AppScanOnCloudSAST(Pipe):
           "KeyId": apikeyid,
           "KeySecret": apikeysecret
         }
-        
+
+        self.code_insights = CodeInsights(self.repo, self.repoOwner, auth_type="authless")
+
         self.asoc = ASoC(apikey)
         logger.info("Executing Pipe: HCL AppScan on Cloud SAST")
         logger.info("\trev 2023-06-30")
@@ -61,14 +73,21 @@ class AppScanOnCloudSAST(Pipe):
         scanName = re.sub('[^a-zA-Z0-9\s_\-\.]', '_', scanName)+"_"+self.getTimeStamp()
         comment = "This scan was created via API testing BitBucket Pipes"
         
+        
+    
         logger.info("========== Step 0: Preparation ====================")
         #Copy contents of the clone dir to the target dir
         logger.info(f"SCAN_NAME: {scanName}")
-        logger.info(f"APP_ID: {appid}")
-        logger.info(f"REPO: {repo}")
+        logger.info(f"APP_ID: {self.appid}")
         logger.info(f"BUILD_NUM: {buildNum}")
         logger.info(f"TARGET_DIR: {self.cloneDir}")
         logger.info(f"DEBUG: {self.debug}")
+        logger.debug(f"REPO: {self.repo}")
+        logger.debug(f"REPO_FULL: {self.repo_full_name}")
+        logger.debug(f"BRANCH: {branch}")
+        logger.debug(f"COMMIT: {self.commit}")
+        logger.debug(f"PROJECT_KEY: {projectKey}")
+        logger.debug(f"REPO_OWNER: {self.repoOwner}")
         logger.debug(f"Current Working Dir: {self.cwd}")
         targetDir = os.path.join(self.cwd, "target")
         logger.debug(f"SCAN TARGET: {targetDir}")
@@ -115,7 +134,7 @@ class AppScanOnCloudSAST(Pipe):
         logger.info("Setting permissions on reports dir")
         os.chmod(reportsDir, 755)
         logger.info("========== Step 0: Complete =======================\n")
-        
+
         #Step 1: Download the SACLientUtil
         logger.info("========== Step 1: Download SAClientUtil ==========")
         appscanPath = self.getSAClient(saclientPath)
@@ -124,8 +143,7 @@ class AppScanOnCloudSAST(Pipe):
             self.fail(message="Error Running ASoC SAST Pipeline")
             return False
         logger.info("========== Step 1: Complete =======================\n")
-        
-        
+         
         #Step 2: Generate the IRX
         logger.info("========== Step 2: Generate IRX File ==============")
         if configFile is None:
@@ -141,25 +159,23 @@ class AppScanOnCloudSAST(Pipe):
             logger.error("IRX File Not Generated.")
             self.fail(message="Error Running ASoC SAST Pipeline")
             return False
-        logger.info("========== Step 2: Complete =======================\n")
-        
+        logger.info("========== Step 2: Complete =======================\n") 
         
         #Step 3: Run the Scan
         logger.info("========== Step 3: Run the Scan on ASoC ===========")
-        scanId = self.runScan(scanName, appid, irxPath, comment, True)
-        if(scanId is None):
+        self.scanId = self.runScan(scanName, self.appid, irxPath, comment, True)
+        if(self.scanId is None):
             logger.error("Error creating scan")
             self.fail(message="Error Running ASoC SAST Pipeline")
             return False
-        logger.info("========== Step 3: Complete =======================\n")
-        
+        logger.info("========== Step 3: Complete =======================\n")   
         
         #Step 4: Get the Scan Summary
         logger.info("========== Step 4: Fetch Scan Summary =============")      
         summaryFileName = scanName+".json"
         summaryPath = os.path.join(reportsDir, summaryFileName)
         logger.debug("Fetching Scan Summary")
-        summary = self.getScanSummary(scanId, summaryPath)
+        summary = self.getScanSummary(self.scanId, summaryPath)
         if(summary is None):
             logger.error("Error getting scan summary")
         else:
@@ -172,53 +188,114 @@ class AppScanOnCloudSAST(Pipe):
             logger.info("Scan Summary:")
             logger.info(f"\tDuration: {durationStr}")
             logger.info(f'\tTotal Issues: {summary["total_issues"]}')
+            logger.info(f'\tCritical Issues: {summary["critical_issues"]}')
             logger.info(f'\t\tHigh Issues: {summary["high_issues"]}')
             logger.info(f'\t\tMed Issues: {summary["medium_issues"]}')
             logger.info(f'\t\tLow Issues: {summary["low_issues"]}')
+            logger.info(f'\t\Info Issues: {summary["info_issues"]}')
             logger.debug("Scan Summary:\n"+json.dumps(summary, indent=2))
         logger.info("========== Step 4: Complete =======================\n")
-        
 
         #Step 5: Download the Scan Report
         logger.info("========== Step 5: Download Scan Report ===========")
         notes = ""
-        if(len(repo)>0):
-            notes += f"Bitbucket Repo: {repo} "
+        if(len(self.repo)>0):
+            notes += f"Bitbucket Repo: {self.repo} "
         if(buildNum!=0):
             notes += f"Build: {buildNum}"
         reportFileName = scanName+".html"
         reportPath = os.path.join(reportsDir, reportFileName)
-        report = self.getReport(scanId, reportPath, notes)
+        report = self.getReport(self.scanId, reportPath, notes)
         if(report is None):
             logger.error("Error downloading report")
             self.fail(message="Error Running ASoC SAST Pipeline")
             return False
         logger.info(f"Report Downloaded [{reportPath}]")
+        logger.info("========== Step 5: Complete =======================\n")
+        
+        self.success(message="ASoC SAST Pipeline Complete")
+
+    def createSummaryReport(self, scanSummaryJson):
+        logger.info("Building CodeInsights Report")
+        report_time = time.time()
+        report_time_stamp = datetime.datetime.fromtimestamp(report_time).strftime('%Y-%m-%dT%H:%M:%S.000Z')
+        """
+        report_data = {
+            "type": "report",
+            "uuid": f"{{{scanSummaryJson['scan_id']}}}",
+            "report_type": "BUG",
+            "external_id": "hcl.appscan.sast",  # required
+            "title": "HCL AppScan on Cloud SAST Report",  # required
+            "details": f"Bitbucket Pipeline Static Analysis resulted in {scanSummaryJson['total_issues']} issues detected.",  # required
+            "result": "PASS",
+            "reporter": "HCL AppScan on Cloud",
+            "link": f"https://cloud.appscan.com/main/myapps/{self.appid}/scans/{scanSummaryJson['scan_id']}/scanOverview",
+            "logo_url": "https://raw.githubusercontent.com/HCL-TECH-SOFTWARE/bitbucket-asoc-sast/1c400bb4df1bc4f23010fbfbee1174ae2e8833c9/appscan.png",
+            "data": [
+                {
+                    "title": "Critical",
+                    "type": "NUMBER",
+                    "value": scanSummaryJson["critical_issues"]
+                },{
+                    "title": "High",
+                    "type": "NUMBER",
+                    "value": scanSummaryJson["high_issues"]
+                },{
+                    "title": "Medium",
+                    "type": "NUMBER",
+                    "value": scanSummaryJson["medium_issues"]
+                },{
+                    "title": "Low",
+                    "type": "NUMBER",
+                    "value": scanSummaryJson["low_issues"]
+                },{
+                    "title": "Info",
+                    "type": "NUMBER",
+                    "value": scanSummaryJson["info_issues"]
+                }
+            ],
+            "created_on": report_time_stamp,
+            "updated_on": report_time_stamp
+        }"""
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+        proxies = {
+            "http": "http://host.docker.internal:29418",
+            "https": "https://host.docker.internal:29418"
+        }
         report_data = {
             "type": "report",
             "uuid": "{asdasd-565656-asdad-565655}",
             "report_type": "BUG",
             "external_id": "10",  # required
-            "title": "HCL AppScan on Cloud SAST Report",  # required
-            "details": "Bitbucket Pipeline Static Analysis",  # required
+            "title": "Bug report",  # required
+            "details": "This bug report is auto generated by bug tool.",  # required
             "result": "FAILED",
-            "reporter": "HCL AppScan on Cloud",
+            "reporter": "Created by atlassians bug tool.",
             "link": "https://bug-tool.atlassian.com/report/10",
             "logo_url": "https://bug-tool.atlassian.com/logo.png",
             "data": [
                 {
-                    "title": "Critical",
-                    "type": "BOOLEAN",
-                    "value": true
+                "title": "FAILED",
+                "type": "BOOLEAN",
+                "value": True
                 },
             ],
             "created_on": "2020-01-08T00:56:20.593Z",
             "updated_on": "2020-01-09T12:00:10.123Z"
         }
-        logger.info("========== Step 5: Complete =======================\n")
-        
-        self.success(message="ASoC SAST Pipeline Complete")
-        
+        logger.debug("Report Data")
+        logger.debug(report_data)
+        #'http://{baseurl}/rest/insights/latest/projects/{projectKey}/repos/{repositorySlug}/commits/{commitId}/reports/{key}' \
+        # url = f'{self.url_scheme}://api.bitbucket.org/2.0/repositories/{self.username}/{self.repo_slug}/commit/{commit}/reports/{report_id}'
+        #url = f"http://api.bitbucket.org/2.0/repositories/{self.repo_full_name}/commit/{self.commit}/reports/hcl_asoc_sast_report"
+        #resp = requests.put(url, headers=headers, json=json.dumps(report_data), proxies=proxies)
+        #logger.debug(resp.status_code)
+        #logger.debug(resp.text)
+        #self.code_insights.create_report(report_data)
+
     #download and unzip SAClientUtil to {cwd}/saclient
     def getSAClient(self, saclientPath="saclient"):
         #Downloading SAClientUtil
