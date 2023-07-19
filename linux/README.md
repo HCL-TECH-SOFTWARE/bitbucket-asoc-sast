@@ -11,7 +11,6 @@ The pipe has 8 variables.
 | API_KEY_SECRET | Required | The HCL AppScan on Cloud API Key Secret |
 | APP_ID | Required | The application Id of the app in AppScan on Cloud |
 | TARGET_DIR | Required | The directory to be scanned. Place scan targets here. |
-| REPO | Optional | The Repository name. Only really used to make filenames and comments relevant. |
 | BUILD_NUM | Optional | The Bitbucket build number. Used to make filenames and comments relevant. |
 | SCAN_NAME | Optional | The name of the scan in AppScan on Cloud |
 | DEBUG | Optional | If true, prints additional debug info to the log. |
