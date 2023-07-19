@@ -44,7 +44,7 @@ pipelines:
         script:
           # Custom Pipe to run Static Analysis via HCL AppScan on Cloud
           # View README: https://github.com/cwtravis/bitbucket-asoc-sast
-          - pipe: docker://cwtravis1/bitbucket_asoc_sast:linux
+          - pipe: docker://cwtravis1/bitbucket_asoc_sast:1.0.1
             variables:
               # Required Variables
               API_KEY_ID: $API_KEY_ID
@@ -60,9 +60,9 @@ pipelines:
           - reports/*
 ```
 
-### Building The Images
+### Building The Image
 
-Feel free to use my docker images just as shown in the example pipeline above. You can also use the following commands to build your own images and push to your dockerhub. Replace <YOUR_DOCKERHUB> with your dockerhub username.
+Feel free to use my docker images just as shown in the example pipeline above. You can also use the following commands to build your own images and push to your dockerhub. Replace `<YOUR_DOCKERHUB>` with your dockerhub username.
 
 Build and Push the Linux Image:
 ```shell
@@ -73,16 +73,7 @@ docker tag asoc_sast_linux <YOUR_DOCKERHUB>/bitbucket_asoc_sast:linux
 docker push <YOUR_DOCKERHUB>/bitbucket_asoc_sast:linux
 ```
 
-Build and Push the Windows Image:
-```shell
-git clone https://github.com/cwtravis/bitbucket-asoc-sast.git
-cd bitbucket-asoc-sast/windows
-docker build -t asoc_sast_win .
-docker tag asoc_sast_win <YOUR_DOCKERHUB>/bitbucket_asoc_sast:windows
-docker push <YOUR_DOCKERHUB>/bitbucket_asoc_sast:windows
-```
-
-Once your images are built, you can use them as in the example pipeline above.
+Once your image is built, you can use them as in the example pipeline above.
 
 ```yaml
 ...
