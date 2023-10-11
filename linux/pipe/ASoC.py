@@ -129,9 +129,9 @@ class ASoC:
             
     def scanSummary(self, id, is_execution=False):
         if(is_execution):
-            asoc_url = "{self.base_url}/api/v2/Scans/Execution/"
+            asoc_url = f"{self.base_url}/api/v2/Scans/Execution/"
         else:
-            asoc_url = "{self.base_url}/api/v2/Scans/"
+            asoc_url = f"{self.base_url}/api/v2/Scans/"
         
         headers = {
             "Accept": "application/json",
@@ -148,7 +148,7 @@ class ASoC:
             return None
         
     def startReport(self, id, reportConfig):
-        url = "{self.base_url}/api/v2/Reports/Security/Scan/"+id
+        url = f"{self.base_url}/api/v2/Reports/Security/Scan/"+id
         headers = {
             "Accept": "application/json",
             "Authorization": "Bearer "+self.token

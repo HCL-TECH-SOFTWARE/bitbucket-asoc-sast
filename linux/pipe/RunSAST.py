@@ -9,6 +9,9 @@ import re
 import datetime
 import shutil
 
+VERSION = "1.1.0"
+REVISION_DATE = "2023-10-11"
+
 logger = get_logger()
 
 schema = {
@@ -65,7 +68,7 @@ class AppScanOnCloudSAST(Pipe):
 
         self.asoc = ASoC(apikey, self.datacenter)
         logger.info("Executing Pipe: HCL AppScan on Cloud SAST")
-        logger.info("\trev 2023-06-30")
+        logger.info(f"\tVersion: {VERSION} rev {REVISION_DATE}")
         if(self.debug):
             logger.setLevel('DEBUG')
             logger.info("Debug logging enabled")
@@ -191,11 +194,11 @@ class AppScanOnCloudSAST(Pipe):
             logger.info("Scan Summary:")
             logger.info(f"\tDuration: {durationStr}")
             logger.info(f'\tTotal Issues: {summary["total_issues"]}')
-            logger.info(f'\tCritical Issues: {summary["critical_issues"]}')
+            logger.info(f'\t\tCritical Issues: {summary["critical_issues"]}')
             logger.info(f'\t\tHigh Issues: {summary["high_issues"]}')
             logger.info(f'\t\tMed Issues: {summary["medium_issues"]}')
             logger.info(f'\t\tLow Issues: {summary["low_issues"]}')
-            logger.info(f'\t\Info Issues: {summary["info_issues"]}')
+            logger.info(f'\t\tInfo Issues: {summary["info_issues"]}')
             logger.debug("Scan Summary:\n"+json.dumps(summary, indent=2))
         logger.info("========== Step 4: Complete =======================\n")
 
@@ -423,10 +426,10 @@ class AppScanOnCloudSAST(Pipe):
         summaryDict = {
             "scan_name": summary["Name"],
             "scan_id": summary["Id"],
-            "createdAt": summary["LatestExecution"]["ExecutionDurationSec"],
+            "createdAt": summary["LatestExecution"]["CreatedAt"],
             "duration_seconds": summary["LatestExecution"]["ExecutionDurationSec"],
-            "critical_issues": summary["LatestExecution"]["ExecutionDurationSec"],
-            "high_issues": summary["LatestExecution"]["NCriticalIssues"],
+            "critical_issues": summary["LatestExecution"]["NCriticalIssues"],
+            "high_issues": summary["LatestExecution"]["NHighIssues"],
             "medium_issues": summary["LatestExecution"]["NMediumIssues"],
             "low_issues": summary["LatestExecution"]["NLowIssues"],
             "info_issues": summary["LatestExecution"]["NInfoIssues"],
