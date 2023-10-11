@@ -44,14 +44,18 @@ class ASoC:
         resp = requests.get(f"{self.base_url}/api/V2/Account/TenantInfo", headers=headers)
         return resp.status_code == 200
     
-    def generateIRX(self, scanName, appscanBin, stdoutFilePath = "", configFile=None, printio=True):
+    def generateIRX(self, scanName, appscanBin, stdoutFilePath = "", configFile=None, secret_scanning=False, printio=True):
+        enableSecrets = ""
+        if secret_scanning:
+            enableSecrets = "--enableSecrets"
+        
         stdoutFile = os.path.join(stdoutFilePath, scanName+'_stdout.txt')
         
         with io.open(stdoutFile, 'wb') as writer, io.open(stdoutFile, 'rb') as reader:
             if(configFile):
-                process = subprocess.Popen([appscanBin, "prepare", "-c", configFile, "-n", scanName], stdout=writer)
+                process = subprocess.Popen([appscanBin, "prepare", "-c", configFile, "-n", scanName, enableSecrets], stdout=writer)
             else:
-                process = subprocess.Popen([appscanBin, "prepare", "-n", scanName], stdout=writer)
+                process = subprocess.Popen([appscanBin, "prepare", "-n", scanName, enableSecrets], stdout=writer)
             while process.poll() is None:
                 if(printio):
                     sys.stdout.write(reader.read().decode('ascii'))
