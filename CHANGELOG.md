@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 1.1.0 - 2023-10-11
+
+- Added optional pipeline variable "DATACENTER" to specify which ASOC datacenter to connect to.
+  - "NA" (default) or "EU"
+
+- Fixed an scan summary misreporting issue counts.
+
 ## Version 1.0.1 - 2023-07-19
 
 - Updated Python to ver 3.11.4

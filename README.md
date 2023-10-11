@@ -3,7 +3,7 @@ This repo contains windows/linux docker image that uses python to download the S
 
 ### Variables
 
-The pipe has 8 variables.
+The pipe has 9 variables.
 
 | Variable |  Required | Description |
 |---|---|---|
@@ -14,6 +14,7 @@ The pipe has 8 variables.
 | REPO | Optional | The Repository name. Only really used to make filenames and comments relevant. |
 | BUILD_NUM | Optional | The Bitbucket build number. Used to make filenames and comments relevant. |
 | SCAN_NAME | Optional | The name of the scan in AppScan on Cloud |
+| DATACENTER | Optional | ASoC Datacenter to connect to: "NA" (default) or "EU" |
 | DEBUG | Optional | If true, prints additional debug info to the log. |
 
 ### Example bitbucket-pipelines.yml step
@@ -24,38 +25,37 @@ The following is the bitbucket-pipelines.yml file from my demo repository that m
 image: gradle:6.6.0
 
 pipelines:
-  default:    
+  default:
     - step:
         name: Build and Test
         caches:
           - gradle
         script:
-          - echo "$BITBUCKET_CLONE_DIR"
           - cd "AltoroJ 3.1.1"
-          - pwd
-          - ls -la
           - gradle build
+          - ls -la build/libs
         artifacts:
           - AltoroJ 3.1.1/build/libs/altoromutual.war
         after-script:
-          - pipe: atlassian/checkstyle-report:0.2.0
+          - pipe: atlassian/checkstyle-report:0.3.0
     - step:
         name: ASoC SAST Scan
         script:
           # Custom Pipe to run Static Analysis via HCL AppScan on Cloud
           # View README: https://github.com/cwtravis/bitbucket-asoc-sast
-          - pipe: docker://cwtravis1/bitbucket_asoc_sast:1.0.1
+          - pipe: docker://cwtravis1/bitbucket_asoc_sast:1.1.0
             variables:
               # Required Variables
-              API_KEY_ID: $API_KEY_ID
-              API_KEY_SECRET: $API_KEY_SECRET
-              APP_ID: a4696e4a-a3c4-449b-b5e3-327fe05c02c3
+              API_KEY_ID: $EU_API_KEY_ID
+              API_KEY_SECRET: $EU_API_KEY_SECRET
+              APP_ID: $EU_APP_ID
+              DATACENTER: "EU"
               TARGET_DIR: $BITBUCKET_CLONE_DIR/AltoroJ 3.1.1/build/libs
               # Optional Variables
               REPO: $BITBUCKET_REPO_FULL_NAME
               BUILD_NUM: $BITBUCKET_BUILD_NUMBER
-              SCAN_NAME: "HCL_ASoC_SAST"
-              DEBUG: "false"
+              SCAN_NAME: "ASoC_SAST_BitBucket"
+              DEBUG: "true"
         artifacts:
           - reports/*
 ```
@@ -86,6 +86,7 @@ Once your image is built, you can use them as in the example pipeline above.
               API_KEY_ID: $API_KEY_ID
               API_KEY_SECRET: $API_KEY_SECRET
               APP_ID: $ASOC_APP_ID
+              DATACENTER: "NA"
               TARGET_DIR: $BITBUCKET_CLONE_DIR/AltoroJ 3.1.1/build/libs
               # Optional Variables
               REPO: $BITBUCKET_REPO_FULL_NAME
