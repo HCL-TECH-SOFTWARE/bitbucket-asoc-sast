@@ -7,12 +7,16 @@ import sys
 import os
 
 class ASoC:
-    def __init__(self, apikey):
+    def __init__(self, apikey, datacenter="NA"):
         self.apikey = apikey
         self.token = ""
+        if datacenter == "EU":
+            self.base_url = "https://cloud.appscan.com/eu"
+        else:
+            self.base_url = "https://cloud.appscan.com"
     
     def login(self):
-        resp = requests.post("https://cloud.appscan.com/api/V2/Account/ApiKeyLogin", json=self.apikey)
+        resp = requests.post(f"{self.base_url}/api/V2/Account/ApiKeyLogin", json=self.apikey)
         if(resp.status_code == 200):
             jsonObj = resp.json()
             self.token = jsonObj["Token"]
@@ -25,7 +29,7 @@ class ASoC:
             "Accept": "application/json",
             "Authorization": "Bearer "+self.token
         }
-        resp = requests.get("https://cloud.appscan.com/api/V2/Account/Logout", headers=headers)
+        resp = requests.get(f"{self.base_url}/api/V2/Account/Logout", headers=headers)
         if(resp.status_code == 200):
             self.token = ""
             return True
@@ -37,7 +41,7 @@ class ASoC:
             "Accept": "application/json",
             "Authorization": "Bearer "+self.token
         }
-        resp = requests.get("https://cloud.appscan.com/api/V2/Account/TenantInfo", headers=headers)
+        resp = requests.get(f"{self.base_url}/api/V2/Account/TenantInfo", headers=headers)
         return resp.status_code == 200
     
     def generateIRX(self, scanName, appscanBin, stdoutFilePath = "", configFile=None, printio=True):
@@ -73,7 +77,7 @@ class ASoC:
             "Accept": "application/json",
             "Authorization": "Bearer "+self.token
         }
-        resp = requests.post("https://cloud.appscan.com/api/V2/FileUpload", headers=headers, files=files)
+        resp = requests.post(f"{self.base_url}/api/V2/FileUpload", headers=headers, files=files)
         if(resp.status_code == 201):
             fileId = resp.json()["FileId"]
             return fileId
@@ -90,7 +94,7 @@ class ASoC:
             "Accept": "application/json",
             "Authorization": "Bearer "+self.token
         }
-        resp = requests.post("https://cloud.appscan.com/api/v2/Scans/StaticAnalyzer", headers=headers, data=data)
+        resp = requests.post(f"{self.base_url}/api/v2/Scans/StaticAnalyzer", headers=headers, data=data)
         if(resp.status_code == 201):
             scanId = resp.json()["Id"]
             return scanId
@@ -101,7 +105,7 @@ class ASoC:
             "Accept": "application/json",
             "Authorization": "Bearer "+self.token
         }
-        resp = requests.get("https://cloud.appscan.com/api/v2/Scans/"+scanId, headers=headers)
+        resp = requests.get(f"{self.base_url}/api/v2/Scans/"+scanId, headers=headers)
         if(resp.status_code == 200):
             return resp.json()["LatestExecution"]["Status"]
         else:
@@ -115,7 +119,7 @@ class ASoC:
             "Authorization": "Bearer "+self.token
         }
         
-        resp = requests.get("https://cloud.appscan.com/api/V2/Apps/"+id, headers=headers)
+        resp = requests.get(f"{self.base_url}/api/V2/Apps/"+id, headers=headers)
         
         if(resp.status_code == 200):
             return resp.json()
@@ -125,9 +129,9 @@ class ASoC:
             
     def scanSummary(self, id, is_execution=False):
         if(is_execution):
-            asoc_url = "https://cloud.appscan.com/api/v2/Scans/Execution/"
+            asoc_url = "{self.base_url}/api/v2/Scans/Execution/"
         else:
-            asoc_url = "https://cloud.appscan.com/api/v2/Scans/"
+            asoc_url = "{self.base_url}/api/v2/Scans/"
         
         headers = {
             "Accept": "application/json",
@@ -144,7 +148,7 @@ class ASoC:
             return None
         
     def startReport(self, id, reportConfig):
-        url = "https://cloud.appscan.com/api/v2/Reports/Security/Scan/"+id
+        url = "{self.base_url}/api/v2/Reports/Security/Scan/"+id
         headers = {
             "Accept": "application/json",
             "Authorization": "Bearer "+self.token
@@ -160,7 +164,7 @@ class ASoC:
             "Accept": "application/json",
             "Authorization": "Bearer "+self.token
         }
-        resp = requests.get("https://cloud.appscan.com/api/V2/Reports/"+reportId, headers=headers)
+        resp = requests.get(f"{self.base_url}/api/V2/Reports/"+reportId, headers=headers)
         if(resp.status_code == 200):
             return resp.json()
         else:
@@ -180,7 +184,7 @@ class ASoC:
             "Accept": "application/json",
             "Authorization": "Bearer "+self.token
         }
-        resp = requests.get("https://cloud.appscan.com/api/v2/Reports/Download/"+reportId, headers=headers)
+        resp = requests.get(f"{self.base_url}/api/v2/Reports/Download/"+reportId, headers=headers)
         if(resp.status_code==200):
             report_bytes = resp.content
             with open(fullPath, "wb") as f:
