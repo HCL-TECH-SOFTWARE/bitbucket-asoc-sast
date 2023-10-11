@@ -9,7 +9,7 @@ import re
 import datetime
 import shutil
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 REVISION_DATE = "2023-10-11"
 
 logger = get_logger()
@@ -17,6 +17,7 @@ logger = get_logger()
 schema = {
     'SCAN_NAME': {'type': 'string', 'required': False, 'default': "HCL_ASoC_SAST"},
     'DATACENTER': {'type': 'string', 'required': False, 'default': "NA"},
+    'SECRET_SCANNING': {'type': 'boolean', 'required': False, 'default': False},
     'CONFIG_FILE_PATH': {'type': 'string', 'required': False, 'default': ""},
     'BUILD_NUM': {'type': 'number', 'required': False, 'default': 0},
     'API_KEY_ID': {'type': 'string', 'required': True},
@@ -44,6 +45,7 @@ class AppScanOnCloudSAST(Pipe):
         self.datacenter = self.get_variable('DATACENTER')
         self.debug = self.get_variable('DEBUG')
         self.cloneDir = self.get_variable('TARGET_DIR')
+        self.secret_scanning = self.get_variable('SECRET_SCANNING')
         buildNum = self.get_variable('BUILD_NUM')
         
         #Read Variables from the Environment
@@ -53,18 +55,20 @@ class AppScanOnCloudSAST(Pipe):
         self.commit = env.get('BITBUCKET_COMMIT', "")
         projectKey = env.get('BITBUCKET_PROJECT_KEY', "")
         self.repoOwner = env.get('BITBUCKET_REPO_OWNER', "")
-
-        configFile = None
-        if len(self.get_variable('CONFIG_FILE_PATH')) > 0:
-            configFile = self.get_variable('CONFIG_FILE_PATH')
             
         self.cwd = os.getcwd()
+
+        configFile = None
+        # Convert relative path to full path
+        if len(self.get_variable('CONFIG_FILE_PATH')) > 0:
+            configFile = os.path.join(self.cwd, self.get_variable('CONFIG_FILE_PATH'))
+
         apikey = {
           "KeyId": apikeyid,
           "KeySecret": apikeysecret
         }
 
-        self.code_insights = CodeInsights(self.repo, self.repoOwner, auth_type="authless")
+        #self.code_insights = CodeInsights(self.repo, self.repoOwner, auth_type="authless")
 
         self.asoc = ASoC(apikey, self.datacenter)
         logger.info("Executing Pipe: HCL AppScan on Cloud SAST")
@@ -86,7 +90,12 @@ class AppScanOnCloudSAST(Pipe):
         logger.info(f"APP_ID: {self.appid}")
         logger.info(f"BUILD_NUM: {buildNum}")
         logger.info(f"TARGET_DIR: {self.cloneDir}")
+        if configFile is not None:
+            logger.info(f"CONFIG_FILE_PATH: {configFile}")
+        else:
+            logger.info(f"CONFIG_FILE_PATH: Not Specified")
         logger.info(f"DATACENTER: {self.datacenter}")
+        logger.info(f"SECRET_SCANNING: {self.secret_scanning}")
         logger.info(f"DEBUG: {self.debug}")
         logger.debug(f"REPO: {self.repo}")
         logger.debug(f"REPO_FULL: {self.repo_full_name}")
@@ -102,6 +111,13 @@ class AppScanOnCloudSAST(Pipe):
         logger.debug(cwd_dir_list)
         clone_dir_list = os.listdir(self.cloneDir)
         logger.debug(clone_dir_list)
+
+        # Check if config file actually exists
+        if not os.path.exists(configFile):
+            logger.error(f"Config Path Does Not Exist: {configFile}")
+            logger.error(f"Using Defaults")
+            configFile = None
+
 
         logger.info(f"Copying [{self.cwd}] to [{targetDir}]")
         if(shutil.copytree(self.cloneDir, targetDir) is None):
@@ -136,6 +152,7 @@ class AppScanOnCloudSAST(Pipe):
                 return False
             else:
                 logger.info(f"Created dir [{reportsDir}]")
+
         #Make sure we have write permission on the reports dir
         logger.info("Setting permissions on reports dir")
         os.chmod(reportsDir, 755)
@@ -154,13 +171,8 @@ class AppScanOnCloudSAST(Pipe):
         logger.info("========== Step 2: Generate IRX File ==============")
         if configFile is None:
             logger.info("Config file not specified. Using defaults.")
-        else:
-            if not os.path.exists(configFile):
-                logger.error(f"Config Path Does Not Exist: {configFile}")
-                logger.error(f"Using Default Config: {configFile}")
-                configFile = None
             
-        irxPath = self.genIrx(scanName, appscanPath, targetDir, reportsDir, configFile)
+        irxPath = self.genIrx(scanName, appscanPath, targetDir, reportsDir, configFile, self.secret_scanning)
         if(irxPath is None):
             logger.error("IRX File Not Generated.")
             self.fail(message="Error Running ASoC SAST Pipeline")
@@ -281,13 +293,15 @@ class AppScanOnCloudSAST(Pipe):
         return appscanPath
         
     #generate IRX file for target directory
-    def genIrx(self, scanName, appscanPath, targetPath, reportsDir, configFile=None):
+    def genIrx(self, scanName, appscanPath, targetPath, reportsDir, configFile=None, secret_scanning=False):
         #Change Working Dir to the target directory
         logger.debug(f"Changing dir to target: [{targetPath}]")
         os.chdir(targetPath)
         logger.info("IRX Gen stdout will be saved to [reports]")
+        logger.info(f"Secret Scanning Enabled: [{secret_scanning}]")
+
         logger.info("Running AppScan Prepare")
-        irxFile = self.asoc.generateIRX(scanName, appscanPath, reportsDir, configFile, self.debug)
+        irxFile = self.asoc.generateIRX(scanName, appscanPath, reportsDir, configFile, secret_scanning, self.debug)
         if(irxFile is None):
             logger.error("IRX Not Generated")
             return None

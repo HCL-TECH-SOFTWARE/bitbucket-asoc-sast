@@ -2,9 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 1.1.1 - 2023-10-11
+
+- Added optional pipeline variable `CONFIG_FILE_PATH` to the docs. It was added previously but not in the example or help docs.
+  - Providing a config file may override other pipeline variables (e.g. `SECRET_SCANNING`)
+- Added optional pipeline variable `SECRET_SCANNING`
+  - False is the default. Setting this to True will enable the secret scanner, which could impact scan time.
+
 ## Version 1.1.0 - 2023-10-11
 
-- Added optional pipeline variable "DATACENTER" to specify which ASOC datacenter to connect to.
+- Added optional pipeline variable `DATACENTER` to specify which ASOC datacenter to connect to.
   - "NA" (default) or "EU"
 
 - Fixed an scan summary misreporting issue counts.

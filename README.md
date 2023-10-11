@@ -3,7 +3,7 @@ This repo contains windows/linux docker image that uses python to download the S
 
 ### Variables
 
-The pipe has 9 variables.
+The pipe has 11 variables.
 
 | Variable |  Required | Description |
 |---|---|---|
@@ -11,11 +11,15 @@ The pipe has 9 variables.
 | API_KEY_SECRET | Required | The HCL AppScan on Cloud API Key Secret |
 | APP_ID | Required | The application Id of the app in AppScan on Cloud |
 | TARGET_DIR | Required | The directory to be scanned. Place scan targets here. |
+| CONFIG_FILE_PATH | Optional | Relative path from the repo root to an appscan config xml file. |
+| SECRET_SCANNING | Optional | True or False (default). Enables the secret scanning feature of ASoC SAST. |
 | REPO | Optional | The Repository name. Only really used to make filenames and comments relevant. |
 | BUILD_NUM | Optional | The Bitbucket build number. Used to make filenames and comments relevant. |
 | SCAN_NAME | Optional | The name of the scan in AppScan on Cloud |
 | DATACENTER | Optional | ASoC Datacenter to connect to: "NA" (default) or "EU" |
 | DEBUG | Optional | If true, prints additional debug info to the log. |
+
+**Note about specifying a config file. Providing a config file can override other settings like `TARGET_DIR` or `SECRET_SCANNING`
 
 ### Example bitbucket-pipelines.yml step
 
@@ -43,13 +47,15 @@ pipelines:
         script:
           # Custom Pipe to run Static Analysis via HCL AppScan on Cloud
           # View README: https://github.com/cwtravis/bitbucket-asoc-sast
-          - pipe: docker://cwtravis1/bitbucket_asoc_sast:1.1.0
+          - pipe: docker://cwtravis1/bitbucket_asoc_sast:test
             variables:
               # Required Variables
-              API_KEY_ID: $EU_API_KEY_ID
-              API_KEY_SECRET: $EU_API_KEY_SECRET
-              APP_ID: $EU_APP_ID
-              DATACENTER: "EU"
+              API_KEY_ID: $API_KEY_ID
+              API_KEY_SECRET: $API_KEY_SECRET
+              APP_ID: $APP_ID
+              DATACENTER: "NA"
+              SECRET_SCANNING: "true"
+              CONFIG_FILE_PATH: "appscan-config.xml"
               TARGET_DIR: $BITBUCKET_CLONE_DIR/AltoroJ 3.1.1/build/libs
               # Optional Variables
               REPO: $BITBUCKET_REPO_FULL_NAME
@@ -87,6 +93,8 @@ Once your image is built, you can use them as in the example pipeline above.
               API_KEY_SECRET: $API_KEY_SECRET
               APP_ID: $ASOC_APP_ID
               DATACENTER: "NA"
+              SECRET_SCANNING: "true"
+              CONFIG_FILE_PATH: "appscan-config.xml"
               TARGET_DIR: $BITBUCKET_CLONE_DIR/AltoroJ 3.1.1/build/libs
               # Optional Variables
               REPO: $BITBUCKET_REPO_FULL_NAME
