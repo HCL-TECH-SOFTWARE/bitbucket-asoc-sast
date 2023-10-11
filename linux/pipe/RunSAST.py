@@ -9,10 +9,14 @@ import re
 import datetime
 import shutil
 
+VERSION = "1.1.0"
+REVISION_DATE = "2023-10-11"
+
 logger = get_logger()
 
 schema = {
     'SCAN_NAME': {'type': 'string', 'required': False, 'default': "HCL_ASoC_SAST"},
+    'DATACENTER': {'type': 'string', 'required': False, 'default': "NA"},
     'CONFIG_FILE_PATH': {'type': 'string', 'required': False, 'default': ""},
     'BUILD_NUM': {'type': 'number', 'required': False, 'default': 0},
     'API_KEY_ID': {'type': 'string', 'required': True},
@@ -37,10 +41,11 @@ class AppScanOnCloudSAST(Pipe):
         apikeyid = self.get_variable('API_KEY_ID')
         apikeysecret = self.get_variable('API_KEY_SECRET')
         self.appid = self.get_variable('APP_ID')
+        self.datacenter = self.get_variable('DATACENTER')
         self.debug = self.get_variable('DEBUG')
         self.cloneDir = self.get_variable('TARGET_DIR')
         buildNum = self.get_variable('BUILD_NUM')
-
+        
         #Read Variables from the Environment
         self.repo = env.get('BITBUCKET_REPO_SLUG', "")
         self.repo_full_name = env.get('BITBUCKET_REPO_FULL_NAME', "")
@@ -61,9 +66,9 @@ class AppScanOnCloudSAST(Pipe):
 
         self.code_insights = CodeInsights(self.repo, self.repoOwner, auth_type="authless")
 
-        self.asoc = ASoC(apikey)
+        self.asoc = ASoC(apikey, self.datacenter)
         logger.info("Executing Pipe: HCL AppScan on Cloud SAST")
-        logger.info("\trev 2023-06-30")
+        logger.info(f"\tVersion: {VERSION} rev {REVISION_DATE}")
         if(self.debug):
             logger.setLevel('DEBUG')
             logger.info("Debug logging enabled")
@@ -81,6 +86,7 @@ class AppScanOnCloudSAST(Pipe):
         logger.info(f"APP_ID: {self.appid}")
         logger.info(f"BUILD_NUM: {buildNum}")
         logger.info(f"TARGET_DIR: {self.cloneDir}")
+        logger.info(f"DATACENTER: {self.datacenter}")
         logger.info(f"DEBUG: {self.debug}")
         logger.debug(f"REPO: {self.repo}")
         logger.debug(f"REPO_FULL: {self.repo_full_name}")
@@ -188,11 +194,11 @@ class AppScanOnCloudSAST(Pipe):
             logger.info("Scan Summary:")
             logger.info(f"\tDuration: {durationStr}")
             logger.info(f'\tTotal Issues: {summary["total_issues"]}')
-            logger.info(f'\tCritical Issues: {summary["critical_issues"]}')
+            logger.info(f'\t\tCritical Issues: {summary["critical_issues"]}')
             logger.info(f'\t\tHigh Issues: {summary["high_issues"]}')
             logger.info(f'\t\tMed Issues: {summary["medium_issues"]}')
             logger.info(f'\t\tLow Issues: {summary["low_issues"]}')
-            logger.info(f'\t\Info Issues: {summary["info_issues"]}')
+            logger.info(f'\t\tInfo Issues: {summary["info_issues"]}')
             logger.debug("Scan Summary:\n"+json.dumps(summary, indent=2))
         logger.info("========== Step 4: Complete =======================\n")
 
@@ -216,85 +222,9 @@ class AppScanOnCloudSAST(Pipe):
         self.success(message="ASoC SAST Pipeline Complete")
 
     def createSummaryReport(self, scanSummaryJson):
-        logger.info("Building CodeInsights Report")
-        report_time = time.time()
-        report_time_stamp = datetime.datetime.fromtimestamp(report_time).strftime('%Y-%m-%dT%H:%M:%S.000Z')
         """
-        report_data = {
-            "type": "report",
-            "uuid": f"{{{scanSummaryJson['scan_id']}}}",
-            "report_type": "BUG",
-            "external_id": "hcl.appscan.sast",  # required
-            "title": "HCL AppScan on Cloud SAST Report",  # required
-            "details": f"Bitbucket Pipeline Static Analysis resulted in {scanSummaryJson['total_issues']} issues detected.",  # required
-            "result": "PASS",
-            "reporter": "HCL AppScan on Cloud",
-            "link": f"https://cloud.appscan.com/main/myapps/{self.appid}/scans/{scanSummaryJson['scan_id']}/scanOverview",
-            "logo_url": "https://raw.githubusercontent.com/HCL-TECH-SOFTWARE/bitbucket-asoc-sast/1c400bb4df1bc4f23010fbfbee1174ae2e8833c9/appscan.png",
-            "data": [
-                {
-                    "title": "Critical",
-                    "type": "NUMBER",
-                    "value": scanSummaryJson["critical_issues"]
-                },{
-                    "title": "High",
-                    "type": "NUMBER",
-                    "value": scanSummaryJson["high_issues"]
-                },{
-                    "title": "Medium",
-                    "type": "NUMBER",
-                    "value": scanSummaryJson["medium_issues"]
-                },{
-                    "title": "Low",
-                    "type": "NUMBER",
-                    "value": scanSummaryJson["low_issues"]
-                },{
-                    "title": "Info",
-                    "type": "NUMBER",
-                    "value": scanSummaryJson["info_issues"]
-                }
-            ],
-            "created_on": report_time_stamp,
-            "updated_on": report_time_stamp
-        }"""
-        headers = {
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-        }
-        proxies = {
-            "http": "http://host.docker.internal:29418",
-            "https": "https://host.docker.internal:29418"
-        }
-        report_data = {
-            "type": "report",
-            "uuid": "{asdasd-565656-asdad-565655}",
-            "report_type": "BUG",
-            "external_id": "10",  # required
-            "title": "Bug report",  # required
-            "details": "This bug report is auto generated by bug tool.",  # required
-            "result": "FAILED",
-            "reporter": "Created by atlassians bug tool.",
-            "link": "https://bug-tool.atlassian.com/report/10",
-            "logo_url": "https://bug-tool.atlassian.com/logo.png",
-            "data": [
-                {
-                "title": "FAILED",
-                "type": "BOOLEAN",
-                "value": True
-                },
-            ],
-            "created_on": "2020-01-08T00:56:20.593Z",
-            "updated_on": "2020-01-09T12:00:10.123Z"
-        }
-        logger.debug("Report Data")
-        logger.debug(report_data)
-        #'http://{baseurl}/rest/insights/latest/projects/{projectKey}/repos/{repositorySlug}/commits/{commitId}/reports/{key}' \
-        # url = f'{self.url_scheme}://api.bitbucket.org/2.0/repositories/{self.username}/{self.repo_slug}/commit/{commit}/reports/{report_id}'
-        #url = f"http://api.bitbucket.org/2.0/repositories/{self.repo_full_name}/commit/{self.commit}/reports/hcl_asoc_sast_report"
-        #resp = requests.put(url, headers=headers, json=json.dumps(report_data), proxies=proxies)
-        #logger.debug(resp.status_code)
-        #logger.debug(resp.text)
-        #self.code_insights.create_report(report_data)
+        ToDo: Create CodeInsights Report
+        """
 
     #download and unzip SAClientUtil to {cwd}/saclient
     def getSAClient(self, saclientPath="saclient"):
@@ -496,10 +426,10 @@ class AppScanOnCloudSAST(Pipe):
         summaryDict = {
             "scan_name": summary["Name"],
             "scan_id": summary["Id"],
-            "createdAt": summary["LatestExecution"]["ExecutionDurationSec"],
+            "createdAt": summary["LatestExecution"]["CreatedAt"],
             "duration_seconds": summary["LatestExecution"]["ExecutionDurationSec"],
-            "critical_issues": summary["LatestExecution"]["ExecutionDurationSec"],
-            "high_issues": summary["LatestExecution"]["NCriticalIssues"],
+            "critical_issues": summary["LatestExecution"]["NCriticalIssues"],
+            "high_issues": summary["LatestExecution"]["NHighIssues"],
             "medium_issues": summary["LatestExecution"]["NMediumIssues"],
             "low_issues": summary["LatestExecution"]["NLowIssues"],
             "info_issues": summary["LatestExecution"]["NInfoIssues"],
