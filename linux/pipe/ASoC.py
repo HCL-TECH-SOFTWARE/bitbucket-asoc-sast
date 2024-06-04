@@ -99,10 +99,12 @@ class ASoC:
             "Authorization": "Bearer "+self.token
         }
         resp = requests.post(f"{self.base_url}/api/v2/Scans/StaticAnalyzer", headers=headers, data=data)
-        if(resp.status_code == 201):
+        if resp.status_code == 201:
             scanId = resp.json()["Id"]
             return scanId
-        return None
+        else:
+            return {"status": "error", "error": resp.json(), "status_code": resp.status_code, "data": data}
+
     
     def getScanStatus(self, scanId):
         headers = {

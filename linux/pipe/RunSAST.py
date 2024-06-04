@@ -365,11 +365,13 @@ class AppScanOnCloudSAST(Pipe):
         logger.debug("Running Scan")
         scanId = self.asoc.createSastScan(scanName, appId, fileId, comment)
         
-        if(scanId):
+        if(len(scanId) == 36):
             logger.info("Scan Created")
             logger.info(f"ScanId: [{scanId}]")
         else:
             logger.error("Scan not created!")
+            logger.error(scanId['error'])
+            logger.error(scanId['data'])
             return None
             
         #If Wait=False, return now with scanId
