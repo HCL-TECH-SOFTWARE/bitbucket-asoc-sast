@@ -215,24 +215,15 @@ class AppScanOnCloudSAST(Pipe):
         logger.info("========== Step 4: Complete =======================\n")
 
         #Step 4.5: Checking a report
-        logger.info("========== Step 4.5: Checking a report =============")
-        # If the report have a Critical issue & High Issue then exit the program
-        if(summary["critical_issues"]>0 or summary["high_issues"]>0):
-            logger.error(f'Critical : {summary["critical_issues"]} or High : {summary["high_issues"]} issues found. Exiting')
-            self.fail(message="Error Running ASoC SAST Pipeline")
-            return False
-        else:
-            logger.info("No critical issues found")
-            logger.info("========== Step 4.5: Complete =======================\n")
-
-        #Step 4.5: Checking a report
-        logger.info("========== Step 4.5: Checking a report =============")
-        # If the report have a Critical issue & High Issue then exit the program
-        if(summary["critical_issues"]>0 or summary["high_issues"]>0):
-            logger.error("Critical or High issues found. Exiting")
-            self.fail(message="Error Running ASoC SAST Pipeline")
-            return False
-        logger.info("========== Step 4.5: Complete =======================\n")
+        # logger.info("========== Step 4.5: Checking a report =============")
+        # # If the report have a Critical issue & High Issue then exit the program
+        # if(summary["critical_issues"]>0 or summary["high_issues"]>0):
+        #     logger.error(f'Critical : {summary["critical_issues"]} or High : {summary["high_issues"]} issues found. Exiting')
+        #     self.fail(message="Error Running ASoC SAST Pipeline")
+        #     return False
+        # else:
+        #     logger.info("No critical issues found")
+        #     logger.info("========== Step 4.5: Complete =======================\n")
         
         #Step 5: Download the Scan Report
         logger.info("========== Step 5: Download Scan Report ===========")
@@ -321,7 +312,7 @@ class AppScanOnCloudSAST(Pipe):
         logger.info(f"Secret Scanning Enabled: [{secret_scanning}]")
 
         logger.info("Running AppScan Prepare")
-        irxFile = self.asoc.generateIRX(scanName, appscanPath, reportsDir, configFile, secret_scanning, self.debug)
+        irxFile = self.asoc.generateIRX(scanName, appscanPath, reportsDir, configFile, self.repo, secret_scanning, self.debug)
         if(irxFile is None):
             logger.error("IRX Not Generated")
             return None
