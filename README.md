@@ -3,7 +3,7 @@ This repo contains windows/linux docker image that uses python to download the S
 
 ### Variables
 
-The pipe has 11 variables.
+The pipe has 13 variables.
 
 | Variable |  Required | Description |
 |---|---|---|
@@ -18,6 +18,8 @@ The pipe has 11 variables.
 | SCAN_NAME | Optional | The name of the scan in AppScan on Cloud |
 | DATACENTER | Optional | ASoC Datacenter to connect to: "NA" (default) or "EU" |
 | DEBUG | Optional | If true, prints additional debug info to the log. |
+| STATIC_ANALYSIS_ONLY | Optional | If true, only prepare for static analysis during IRX generation. |
+| OPEN_SOURCE_ONLY | Optional | If true, only gather opensource information during IRX generation. |
 
 **Note about specifying a config file. Providing a config file can override other settings like `TARGET_DIR` or `SECRET_SCANNING`
 
@@ -53,15 +55,17 @@ pipelines:
               API_KEY_ID: $API_KEY_ID
               API_KEY_SECRET: $API_KEY_SECRET
               APP_ID: $APP_ID
+              TARGET_DIR: $BITBUCKET_CLONE_DIR/AltoroJ 3.1.1/build/libs
+              # Optional Variables
               DATACENTER: "NA"
               SECRET_SCANNING: "true"
               CONFIG_FILE_PATH: "appscan-config.xml"
-              TARGET_DIR: $BITBUCKET_CLONE_DIR/AltoroJ 3.1.1/build/libs
-              # Optional Variables
               REPO: $BITBUCKET_REPO_FULL_NAME
               BUILD_NUM: $BITBUCKET_BUILD_NUMBER
               SCAN_NAME: "ASoC_SAST_BitBucket"
               DEBUG: "true"
+              STATIC_ANALYSIS_ONLY: "false"
+              OPEN_SOURCE_ONLY: "false"
         artifacts:
           - reports/*
 ```

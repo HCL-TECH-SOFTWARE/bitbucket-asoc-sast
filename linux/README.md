@@ -3,7 +3,7 @@ This is a linux docker image that uses python to download the SAClientUtil from 
 
 ### Variables
 
-The pipe has 8 variables.
+The pipe has 13 variables.
 
 | Variable |  Required | Description |
 |---|---|---|
@@ -11,9 +11,15 @@ The pipe has 8 variables.
 | API_KEY_SECRET | Required | The HCL AppScan on Cloud API Key Secret |
 | APP_ID | Required | The application Id of the app in AppScan on Cloud |
 | TARGET_DIR | Required | The directory to be scanned. Place scan targets here. |
+| CONFIG_FILE_PATH | Optional | Relative path from the repo root to an appscan config xml file. |
+| SECRET_SCANNING | Optional | True or False (default). Enables the secret scanning feature of ASoC SAST. |
 | BUILD_NUM | Optional | The Bitbucket build number. Used to make filenames and comments relevant. |
+| REPO | Optional | The Repository name. Only really used to make filenames and comments relevant. |
 | SCAN_NAME | Optional | The name of the scan in AppScan on Cloud |
+| DATACENTER | Optional | ASoC Datacenter to connect to: "NA" (default) or "EU" |
 | DEBUG | Optional | If true, prints additional debug info to the log. |
+| STATIC_ANALYSIS_ONLY | Optional | If true, only prepare for static analysis during IRX generation. |
+| OPEN_SOURCE_ONLY | Optional | If true, only gather opensource information during IRX generation. |
 
 ### Example bitbucket-pipelines.yml step
 

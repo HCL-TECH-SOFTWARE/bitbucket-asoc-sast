@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 1.1.2 - 2024-11-12
+
+- Updated linux pipe to work with ASoC v4 APIs.
+- Added initial support for OSO and SAO scanning. 
+
 ## Version 1.1.1 - 2023-10-11
 
 - Added optional pipeline variable `CONFIG_FILE_PATH` to the docs. It was added previously but not in the example or help docs.
