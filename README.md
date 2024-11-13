@@ -12,7 +12,7 @@ The pipe has 13 variables.
 | APP_ID | Required | The application Id of the app in AppScan on Cloud |
 | TARGET_DIR | Required | The directory to be scanned. Place scan targets here. |
 | CONFIG_FILE_PATH | Optional | Relative path from the repo root to an appscan config xml file. |
-| SECRET_SCANNING | Optional | True or False. Enables or disables the secret scanning feature of ASoC SAST. |
+| SECRET_SCANNING | Optional | True or False. Enables or disables the secret scanning feature. |
 | REPO | Optional | The Repository name. Only really used to make filenames and comments relevant. |
 | BUILD_NUM | Optional | The Bitbucket build number. Used to make filenames and comments relevant. |
 | SCAN_NAME | Optional | The name of the scan in AppScan on Cloud |
