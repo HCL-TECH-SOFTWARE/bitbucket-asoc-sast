@@ -13,8 +13,13 @@ class ASoC:
         self.token = ""
         if datacenter == "EU":
             self.base_url = "https://eu.cloud.appscan.com"
-        else:
+        elif datacenter == "NA":
             self.base_url = "https://cloud.appscan.com"
+        else:
+            self.base_url = datacenter
+    
+    def getDataCenterURL(self):
+        return self.base_url
     
     def login(self):
         resp = requests.post(f"{self.base_url}/api/v4/Account/ApiKeyLogin", json=self.apikey)
@@ -45,13 +50,16 @@ class ASoC:
         resp = requests.get(f"{self.base_url}/api/v4/Account/TenantInfo", headers=headers)
         return resp.status_code == 200
     
-    def generateIRX(self, scanName, scan_flag, appscanBin, stdoutFilePath = "", configFile=None, secret_scanning=False, printio=True):
+    def generateIRX(self, scanName, scan_flag, appscanBin, stdoutFilePath = "", configFile=None, secret_scanning=None, printio=True):
         #Build scan arguments
         args = [appscanBin, "prepare", "-n", scanName]
         if configFile:
             args.extend(["-c", configFile])
-        if secret_scanning:
-            args.append("--enableSecrets")
+        if secret_scanning is not None:
+            if secret_scanning == False:
+                args.append("--noSecrets")
+            elif secret_scanning == True:
+                args.append("--enableSecrets")
         if scan_flag is not None:
             args.append(scan_flag)
         

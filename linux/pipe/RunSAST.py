@@ -1,6 +1,7 @@
 from bitbucket_pipes_toolkit import Pipe, get_logger, CodeInsights
 from ASoC import ASoC
 import requests
+import socket
 import os
 import json
 import time
@@ -17,7 +18,7 @@ logger = get_logger()
 schema = {
     'SCAN_NAME': {'type': 'string', 'required': False, 'default': "HCL_ASoC_SAST"},
     'DATACENTER': {'type': 'string', 'required': False, 'default': "NA"},
-    'SECRET_SCANNING': {'type': 'boolean', 'required': False, 'default': False},
+    'SECRET_SCANNING': {'type': 'boolean', 'required': False, 'default': None},
     'CONFIG_FILE_PATH': {'type': 'string', 'required': False, 'default': ""},
     'REPO': {'type': 'string', 'required': False, 'default': ""},
     'BUILD_NUM': {'type': 'number', 'required': False, 'default': 0},
@@ -256,12 +257,22 @@ class AppScanOnCloudSAST(Pipe):
     #download and unzip SAClientUtil to {cwd}/saclient
     def getSAClient(self, saclientPath="saclient"):
         #Downloading SAClientUtil
-        url = "https://cloud.appscan.com/api/v4/Tools/SAClientUtil?os=linux"
-        logger.info("Downloading SAClientUtil Zip")
-        r = requests.get(url, stream=True)
+        url = self.asoc.getDataCenterURL() + "/api/v4/Tools/SAClientUtil?os=linux"
+        logger.info(f"Downloading SAClientUtil Zip from: {url}")
+
+        try:
+            r = requests.get(url, stream=True)
+        except socket.gaierror as e:
+            print(f"DNS resolution failed: {e}")
+            return None
+        except requests.exceptions.RequestException as e:
+            print(f"HTTP request failed: {e}")
+            return None
+
         if(r.status_code != 200):
             logger.error("Invalid HTTP code downloading SAClient Util")
-            return False
+            return None
+        
         chunk_size = 4096
         xfered = 0
         start = time.time()
