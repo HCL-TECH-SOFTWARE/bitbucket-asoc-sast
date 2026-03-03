@@ -25,16 +25,17 @@ import platform
 import os
 import json
 from constants import (
-    DATACENTER_EU, DATACENTER_NA, DATACENTER_URL_ASOC_EU, DATACENTER_URL_ASOC_US,
+    CLIENT_TYPE_FORMAT, DATACENTER_EU, DATACENTER_NA, DATACENTER_URL_ASOC_EU, DATACENTER_URL_ASOC_US,
     API_LOGIN, API_LOGOUT, API_TENANT_INFO, API_FILE_UPLOAD,
     API_SAST_SCAN, API_SCA_SCAN, API_SCAN_EXECUTIONS, API_APPS,
     API_SAST_EXECUTION, API_SCA_EXECUTION,
+    API_ISSUES,
     API_REPORT_SECURITY_SCAN, API_REPORTS_FILTER, API_REPORT_DOWNLOAD,
     CONTENT_TYPE_JSON, CONTENT_TYPE_OCTET_STREAM,
     SCAN_STATUS_READY, SCAN_STATUS_ABORT,
     REPORT_WAIT_INTERVAL_SECS, REPORT_WAIT_TIMEOUT_SECS,
     MSG_ERROR_SUBMITTING_SCAN, MSG_ASOC_REPORT_STATUS, MSG_ASOC_APP_SUMMARY_ERROR,
-    TIMESTAMP_FORMAT, CLIENT_TYPE_FORMAT, VERSION
+    TIMESTAMP_FORMAT, VERSION,
 )
 
 # Disable SSL warnings when bypassing certificate verification
@@ -301,6 +302,56 @@ class ASoC:
             self.logger.error(resp.text)
             return None
         
+    def getNonCompliantIssues(self, scanId):
+        """Fetch non-compliant issues for a scan, grouped by severity.
+
+        Calls the Issues API with policy filtering to get counts of issues
+        that are Open, InProgress, Reopened, or New, grouped by Severity.
+
+        Args:
+            scanId: The scan ID to fetch issues for.
+
+        Returns:
+            A dict mapping severity names to counts, e.g.
+            {"Critical": 5, "High": 10, "Medium": 3, "Low": 1, "Informational": 0},
+            or None on error.
+        """
+        # Query string (URL-encoded): ?applyPolicies=All&$top=100&$apply=filter(Status eq 'Open' or Status eq 'InProgress' or Status eq 'Reopened')/groupby((Severity),aggregate($count as Count))
+        query_string = (
+            "?applyPolicies=All"
+            "&%24top=100"
+            "&%24apply=filter%28"
+            "Status%20eq%20%27Open%27%20or%20"
+            "Status%20eq%20%27InProgress%27%20or%20"
+            "Status%20eq%20%27Reopened%27%29%2F"
+            "groupby%28%28Severity%29%2Caggregate%28%24count%20as%20Count%29%29"
+        )
+        url = f"{self.base_url}{API_ISSUES}{scanId}{query_string}"
+        headers = {
+            "Accept": CONTENT_TYPE_JSON,
+            "Authorization": "Bearer " + self.token
+        }
+        try:
+            if self.allow_untrusted:
+                resp = requests.get(url, headers=headers, verify=False)
+            else:
+                resp = requests.get(url, headers=headers)
+            if resp.status_code == 200:
+                response_json = resp.json()
+                items = response_json.get("Items", [])
+                result = {}
+                for item in items:
+                    severity = item.get("Severity", "Unknown")
+                    count = item.get("Count", 0)
+                    result[severity] = count
+                return result
+            else:
+                self.logger.error(f"Error fetching non-compliant issues: {resp.status_code} - {resp.text}")
+                return None
+        except Exception as e:
+            self.logger.error(f"Exception fetching non-compliant issues: {e}")
+            return None
+
     def startReport(self, id, reportConfig):
         url = f"{self.base_url}{API_REPORT_SECURITY_SCAN}"+id
         headers = {
@@ -328,8 +379,7 @@ class ASoC:
         if(resp.status_code == 200):
             return resp.json()
         else:
-            self.logger.error(f"Failed to get report status for reportId: {reportId}")
-            self.logger.error(resp.text)
+            self.logger.error(f"Error fetching report status for reportId {reportId}: {resp.status_code} - {resp.text}")
             return {"Status": SCAN_STATUS_ABORT, "Progress": 0}
             
     def waitForReport(self, reportId, intervalSecs=REPORT_WAIT_INTERVAL_SECS, timeoutSecs=REPORT_WAIT_TIMEOUT_SECS):
@@ -365,4 +415,6 @@ class ASoC:
 
     def getClientType(self):
         os_name = platform.system().lower()
-        return CLIENT_TYPE_FORMAT.replace("<os>", os_name).replace("<plugin-version>", VERSION)
+        client_type = CLIENT_TYPE_FORMAT.replace("<os>", os_name).replace("<plugin-version>", VERSION)
+        self.logger.info(f"Client Type: {client_type}")
+        return client_type

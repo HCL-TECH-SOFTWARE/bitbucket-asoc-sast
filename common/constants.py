@@ -15,8 +15,10 @@
 #
 
 """
-Centralized constants for the Linux ASoC SAST Bitbucket Pipe.
-Modify values here to apply changes across the entire pipe.
+Centralized shared constants for the ASoC SAST Bitbucket Pipe.
+Platform-specific values (SACLIENT_TOOL_TYPE, APPSCAN_BIN_NAME,
+SACLIENT_DOWNLOAD_ENDPOINT) are defined in each platform's
+platform_config.py file.
 """
 
 # =============================================================================
@@ -45,16 +47,10 @@ API_SCAN_EXECUTIONS = "/api/v4/Scans/{scan_id}/Executions?%24top=1&%24count=fals
 API_APPS = "/api/v4/Apps/"
 API_SAST_EXECUTION = "/api/v4/Scans/SastExecution/"
 API_SCA_EXECUTION = "/api/v4/Scans/ScaExecution/"
+API_ISSUES = "/api/v4/Issues/"
 API_REPORT_SECURITY_SCAN = "/api/v4/Reports/Security/Scan/"
 API_REPORTS_FILTER = "/api/v4/Reports?filter=Id%20eq%20"
 API_REPORT_DOWNLOAD = "/api/v4/Reports/{report_id}/Download"
-
-# =============================================================================
-# Platform-Specific: SAClient Configuration
-# =============================================================================
-SACLIENT_TOOL_TYPE = "linux"
-SACLIENT_DOWNLOAD_ENDPOINT = f"/api/v4/Tools/SAClientUtilByType?toolType={SACLIENT_TOOL_TYPE}"
-APPSCAN_BIN_NAME = "appscan.sh"
 
 # =============================================================================
 # HTTP Headers & Content Types

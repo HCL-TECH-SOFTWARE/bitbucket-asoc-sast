@@ -10,14 +10,19 @@ RUN powershell -Command " \
     Remove-Item python-installer.exe \
 "
 
-COPY requirements.txt /
+# Build context must be the repository root:
+#   docker build -f windows/Dockerfile .
+COPY windows/requirements.txt /
 RUN pip install -r /requirements.txt
 
 # Create app directory with controlled permissions
 RUN powershell -Command "New-Item -ItemType Directory -Path 'C:\app' -Force | Out-Null"
 
-COPY pipe /app/
-COPY LICENSE pipe.yml README.md /app/
+# Shared modules from common/
+COPY common/__init__.py common/constants.py common/ASoC.py common/RunSASTBase.py /app/
+# Platform-specific thin subclass + config
+COPY windows/pipe/__init__.py windows/pipe/platform_config.py windows/pipe/RunSAST.py /app/
+COPY windows/LICENSE windows/pipe.yml windows/README.md /app/
 
 WORKDIR /app
 

@@ -212,8 +212,8 @@ Feel free to use my docker images just as shown in the example pipeline above. Y
 Build and Push the Linux Image:
 ```shell
 git clone https://github.com/cwtravis/bitbucket-asoc-sast.git
-cd bitbucket-asoc-sast/linux
-docker build -t asoc_sast_linux .
+cd bitbucket-asoc-sast
+docker build -f linux/Dockerfile -t asoc_sast_linux .
 docker tag asoc_sast_linux <YOUR_DOCKERHUB>/bitbucket_asoc_sast:linux
 docker push <YOUR_DOCKERHUB>/bitbucket_asoc_sast:linux
 ```
@@ -301,24 +301,28 @@ pipelines:
 
           # Run the Windows-based ASoC SAST scan container
           - docker run --rm `
-              -e API_KEY_ID=$env:API_KEY_ID `
-              -e API_KEY_SECRET=$env:API_KEY_SECRET `
-              -e APP_ID=$env:APP_ID `
-              -e TARGET_DIR="C:\src\bin" `
-              -e DATACENTER="NA" `
-              -e SECRET_SCANNING="true" `
-              -e CONFIG_FILE_PATH="C:\src\appscan-config.xml" `
-              -e REPO=$env:BITBUCKET_REPO_FULL_NAME `
-              -e BUILD_NUM=$env:BITBUCKET_BUILD_NUMBER `
-              -e SCAN_NAME="ASoC_SAST_BitBucket" `
-              -e DEBUG="true" `
-              -e STATIC_ANALYSIS_ONLY="false" `
-              -e OPEN_SOURCE_ONLY="false" `
-              -e ALLOW_UNTRUSTED="false" `
-              -e SCAN_SPEED="balanced" `
-              -e PERSONAL_SCAN="false" `
-              -v "${localPath}:C:\src" `
-              vndpal/bitbucket_asoc_sast:windows17
+                  -e API_KEY_ID=$env:API_KEY_ID `
+                  -e API_KEY_SECRET=$env:API_KEY_SECRET `
+                  -e APP_ID=$env:APP_ID `
+                  -e TARGET_DIR="C:\src\bin" `
+                  -e DATACENTER="NA" `
+                  -e SECRET_SCANNING="true" `
+                  -e CONFIG_FILE_PATH="C:\src\appscan-config.xml" `
+                  -e SCAN_NAME="ASoC_SAST_BitBucket" `
+                  -e DEBUG="true" `
+                  -e STATIC_ANALYSIS_ONLY="false" `
+                  -e OPEN_SOURCE_ONLY="false" `
+                  -e ALLOW_UNTRUSTED="false" `
+                  -e SCAN_SPEED="balanced" `
+                  -e PERSONAL_SCAN="false" `
+                  -e BITBUCKET_REPO_SLUG=$env:BITBUCKET_REPO_SLUG `
+                  -e BITBUCKET_REPO_FULL_NAME=$env:BITBUCKET_REPO_FULL_NAME `
+                  -e BITBUCKET_BRANCH=$env:BITBUCKET_BRANCH `
+                  -e BITBUCKET_COMMIT=$env:BITBUCKET_COMMIT `
+                  -e BITBUCKET_PROJECT_KEY=$env:BITBUCKET_PROJECT_KEY `
+                  -e BITBUCKET_REPO_OWNER=$env:BITBUCKET_REPO_OWNER `
+                  -v "${localPath}:C:\src" `
+                  vndpal/bitbucket_asoc_sast:windows17
 
         artifacts:
           - reports/*
@@ -338,8 +342,11 @@ This repository is fully customizable. You can modify the files to create your o
    ```
 
 2. **Modify Python Scripts**
-   - Edit `linux/pipe/ASoC.py` or `windows/pipe/ASoC.py` to customize API interactions, error handling, or add new features
-   - Edit `linux/pipe/RunSAST.py` or `windows/pipe/RunSAST.py` to modify scan execution logic, reporting, or workflow
+   - Edit `common/ASoC.py` to customize API interactions or error handling (shared by both platforms)
+   - Edit `common/RunSASTBase.py` to modify shared scan execution logic, reporting, or workflow
+   - Edit `common/constants.py` to change shared constants
+   - Edit `linux/pipe/RunSAST.py` or `windows/pipe/RunSAST.py` to modify platform-specific behavior
+   - Edit `linux/pipe/platform_config.py` or `windows/pipe/platform_config.py` to change platform-specific constants
 
 3. **Update Docker Configuration**
    - Modify `linux/Dockerfile` or `windows/Dockerfile` to change base images or configure the environment
@@ -350,15 +357,16 @@ This repository is fully customizable. You can modify the files to create your o
    - Adapt the docker run commands and environment variables in your `bitbucket-pipelines.yml` to fit your project's requirements
 
 5. **Build and Push Your Custom Image**
+
+   **Important:** Docker builds must be run from the repository root so that the shared `common/` directory is included in the build context.
+
    ```shell
-   # For Linux
-   cd linux
-   docker build -t <YOUR_DOCKERHUB>/bitbucket_asoc_sast:custom .
+   # For Linux (from repo root)
+   docker build -f linux/Dockerfile -t <YOUR_DOCKERHUB>/bitbucket_asoc_sast:custom .
    docker push <YOUR_DOCKERHUB>/bitbucket_asoc_sast:custom
    
-   # For Windows
-   cd windows
-   docker build -t <YOUR_DOCKERHUB>/bitbucket_asoc_sast:windows-custom .
+   # For Windows (from repo root)
+   docker build -f windows/Dockerfile -t <YOUR_DOCKERHUB>/bitbucket_asoc_sast:windows-custom .
    docker push <YOUR_DOCKERHUB>/bitbucket_asoc_sast:windows-custom
    ```
 
