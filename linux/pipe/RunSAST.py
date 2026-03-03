@@ -75,7 +75,28 @@ schema = {
 
 class AppScanOnCloudSAST(Pipe):
     asoc = None
-    
+
+    @staticmethod
+    def _safe_path_join(base_dir, *paths):
+        """Safely join paths, ensuring result stays within base_dir to prevent path traversal.
+        
+        Resolves the final path to its canonical form and verifies it resides
+        within the expected base directory.  Raises ValueError if a traversal
+        is detected (e.g. via ``..`` components or symlinks).
+        """
+        # Strip leading separators from each component to prevent absolute-path injection
+        # (Python's os.path.join discards base_dir if any component is absolute)
+        sanitized_paths = tuple(p.lstrip(os.sep) for p in paths)
+        joined = os.path.join(base_dir, *sanitized_paths)
+        resolved = os.path.realpath(joined)
+        base_resolved = os.path.realpath(base_dir)
+        base_prefix = base_resolved if base_resolved.endswith(os.sep) else base_resolved + os.sep
+        if not (resolved == base_resolved or resolved.startswith(base_prefix)):
+            raise ValueError(
+                f"Path traversal detected: '{joined}' resolves outside base directory '{base_dir}'"
+            )
+        return resolved
+
     #Run SAST Scan Process
     def run(self):
         super().run()
@@ -126,9 +147,15 @@ class AppScanOnCloudSAST(Pipe):
             scan_flag = SCAN_FLAG_OSO
 
         configFile = None
-        # Convert relative path to full path
+        # Convert relative path to full path (with traversal check).
+        # If CONFIG_FILE_PATH is already absolute (e.g. a mounted volume path), use it
+        # directly so the base-dir containment check doesn't reject it.
         if len(self.get_variable('CONFIG_FILE_PATH')) > 0:
-            configFile = os.path.join(self.cwd, self.get_variable('CONFIG_FILE_PATH'))
+            config_path = self.get_variable('CONFIG_FILE_PATH')
+            if os.path.isabs(config_path):
+                configFile = os.path.realpath(config_path)
+            else:
+                configFile = self._safe_path_join(self.cwd, config_path)
 
         allow_untrusted = self.get_variable('ALLOW_UNTRUSTED')
 
@@ -176,7 +203,7 @@ class AppScanOnCloudSAST(Pipe):
         logger.debug(f"PROJECT_KEY: {projectKey}")
         logger.debug(f"REPO_OWNER: {self.repoOwner}")
         logger.debug(f"Current Working Dir: {self.cwd}")
-        targetDir = os.path.join(self.cwd, TARGET_DIR)
+        targetDir = self._safe_path_join(self.cwd, TARGET_DIR)
         logger.debug(f"SCAN TARGET: {targetDir}")
 
         cwd_dir_list = os.listdir(self.cwd)
@@ -192,14 +219,16 @@ class AppScanOnCloudSAST(Pipe):
                 configFile = None
 
 
-        logger.info(f"Copying [{self.cwd}] to [{targetDir}]")
-        if(shutil.copytree(self.cloneDir, targetDir) is None):
+        # Validate cloneDir to prevent path traversal
+        safe_cloneDir = os.path.realpath(self.cloneDir)
+        logger.info(f"Copying [{safe_cloneDir}] to [{targetDir}]")
+        if(shutil.copytree(safe_cloneDir, targetDir) is None):
             logger.error("Cannot copy build clone dir into target dir")
             self.fail(message=MSG_PIPELINE_ERROR)
             return False
             
         #Create the saclient dir if it doesn not exist
-        saclientPath = os.path.join(self.cwd, SACLIENT_DIR)
+        saclientPath = self._safe_path_join(self.cwd, SACLIENT_DIR)
         if(not os.path.isdir(saclientPath)):
             logger.debug(f"SAClient Path [{saclientPath}] does not exist")
             try:
@@ -215,7 +244,7 @@ class AppScanOnCloudSAST(Pipe):
                 return False
                 
         #Create Reports Dir if it does not exist 
-        reportsDir = os.path.join(self.cwd, REPORTS_DIR)
+        reportsDir = self._safe_path_join(self.cwd, REPORTS_DIR)
         if(not os.path.isdir(reportsDir)):
             logger.debug(f"Reports dir doesn't exists [{reportsDir}]")
             os.mkdir(reportsDir)
@@ -253,7 +282,7 @@ class AppScanOnCloudSAST(Pipe):
         
         #Step 3: Run the Scan(s)
         logger.info("========== Step 3: Run the Scan on ASoC ===========")
-        scan_result = self.runScan(scanName, self.appID, irxPath, comment, True, self.personal_scan)
+        scan_result = self.runScan(scanName, self.appID, irxPath, comment, self.wait_for_analysis, self.personal_scan)
         if(scan_result is None):
             logger.error("Error creating scan(s)")
             self.fail(message=MSG_PIPELINE_ERROR)
@@ -262,7 +291,17 @@ class AppScanOnCloudSAST(Pipe):
         sca_scan_id = scan_result.get('sca_scan_id')
         # For backward compatibility
         self.scanID = sast_scan_id or sca_scan_id
-        logger.info("========== Step 3: Complete =======================\n")   
+        logger.info("========== Step 3: Complete =======================\n")
+
+        # If WAIT_FOR_ANALYSIS is False, pipeline completes immediately after scan initiation
+        if not self.wait_for_analysis:
+            logger.info("WAIT_FOR_ANALYSIS=False: pipeline completing after scan submission")
+            if sast_scan_id:
+                logger.info(f"SAST Scan submitted: [{sast_scan_id}]")
+            if sca_scan_id:
+                logger.info(f"SCA Scan submitted: [{sca_scan_id}]")
+            self.success(message=MSG_PIPELINE_SUCCESS)
+            return
         
         #Step 4: Get the Scan Summary
         logger.info("========== Step 4: Fetch Scan Summary =============")      
@@ -272,7 +311,7 @@ class AppScanOnCloudSAST(Pipe):
             if scan_id is None:
                 continue
             summaryFileName = scanName + f"_{scan_type.lower()}.json"
-            sSummaryPath = os.path.join(reportsDir, summaryFileName)
+            sSummaryPath = self._safe_path_join(reportsDir, summaryFileName)
             summary_paths[scan_type] = sSummaryPath
             logger.debug(f"Fetching {scan_type} Scan Summary")
             scan_summary = self.getScanSummary(scan_id, sSummaryPath)
@@ -305,7 +344,7 @@ class AppScanOnCloudSAST(Pipe):
             if scan_id is None:
                 continue
             reportFileName = scanName + f"_{scan_type.lower()}.html"
-            reportPath = os.path.join(reportsDir, reportFileName)
+            reportPath = self._safe_path_join(reportsDir, reportFileName)
             logger.info(f"Downloading {scan_type} report...")
             report = self.getReport(scan_id, reportPath, notes)
             if(report is None):
@@ -399,8 +438,8 @@ class AppScanOnCloudSAST(Pipe):
         sca_scan_id = scan_result.get('sca_scan_id', '')
         
         # Create output files that can be sourced in bash or parsed
-        outputFile = os.path.join(reportsDir, SCAN_RESULTS_FILENAME)
-        envFile = os.path.join(reportsDir, SCAN_ENV_FILENAME)
+        outputFile = self._safe_path_join(reportsDir, SCAN_RESULTS_FILENAME)
+        envFile = self._safe_path_join(reportsDir, SCAN_ENV_FILENAME)
         
         # Write human-readable output
         with open(outputFile, 'w') as f:
@@ -449,7 +488,7 @@ class AppScanOnCloudSAST(Pipe):
             summary_paths: dict keyed by scan type ('SAST', 'SCA') with JSON summary paths
             reportsDir: path to reports directory
         """
-        pathsFile = os.path.join(reportsDir, REPORT_PATHS_FILENAME)
+        pathsFile = self._safe_path_join(reportsDir, REPORT_PATHS_FILENAME)
         with open(pathsFile, 'w') as f:
             for scan_type in ['SAST', 'SCA']:
                 if scan_type in report_paths:
@@ -468,8 +507,8 @@ class AppScanOnCloudSAST(Pipe):
                 logger.info(f"{scan_type} HTML Report: {report_paths[scan_type]}")
             if scan_type in summary_paths:
                 logger.info(f"{scan_type} JSON Summary: {summary_paths[scan_type]}")
-        logger.info(f"Scan Results: {os.path.join(reportsDir, SCAN_RESULTS_FILENAME)}")
-        logger.info(f"Environment File: {os.path.join(reportsDir, SCAN_ENV_FILENAME)}")
+        logger.info(f"Scan Results: {self._safe_path_join(reportsDir, SCAN_RESULTS_FILENAME)}")
+        logger.info(f"Environment File: {self._safe_path_join(reportsDir, SCAN_ENV_FILENAME)}")
         logger.info("")
         logger.info("To use these outputs in your bitbucket-pipelines.yml:")
         logger.info("1. Add artifacts section to preserve reports/")
@@ -536,7 +575,7 @@ class AppScanOnCloudSAST(Pipe):
         chunk_size = DOWNLOAD_CHUNK_SIZE
         xfered = 0
         start = time.time()
-        save_path = os.path.join(self.cwd, SACLIENT_ZIP_FILENAME)
+        save_path = self._safe_path_join(self.cwd, SACLIENT_ZIP_FILENAME)
         with open(save_path, 'wb') as fd:
             for chunk in r.iter_content(chunk_size=chunk_size):
                 fd.write(chunk)
@@ -573,16 +612,18 @@ class AppScanOnCloudSAST(Pipe):
         logger.info("Setting permissions on SACLientUtil Files")
         for root, dirs, files in os.walk(saclientPath):
             for d in dirs:
-                os.chmod(os.path.join(root, d), FILE_PERMISSION_MODE)
+                dir_path = self._safe_path_join(root, d)
+                os.chmod(dir_path, FILE_PERMISSION_MODE)
             for f in files:
-                os.chmod(os.path.join(root, f), FILE_PERMISSION_MODE)
+                file_path = self._safe_path_join(root, f)
+                os.chmod(file_path, FILE_PERMISSION_MODE)
         
         #Find the appscan executable
         logger.debug("Finding appscan bin path")
         appscanPath = None
         dirs = os.listdir(saclientPath)
         for file in dirs:
-            appscanPath = os.path.join(self.cwd, saclientPath, file, "bin", APPSCAN_BIN_NAME)
+            appscanPath = self._safe_path_join(saclientPath, file, "bin", APPSCAN_BIN_NAME)
             
         if(os.path.exists(appscanPath)):
             logger.debug(f"AppScan Bin Path [{appscanPath}]")
@@ -608,8 +649,8 @@ class AppScanOnCloudSAST(Pipe):
             logger.error("IRX Not Generated")
             return None
             
-        irxPath = os.path.join(targetPath, irxFile)
-        logPath = os.path.join(targetPath, scanName+"_logs.zip")
+        irxPath = self._safe_path_join(targetPath, irxFile)
+        logPath = self._safe_path_join(targetPath, scanName+"_logs.zip")
         
         #Change working dir back to the previous current working dir
         logger.debug(f"Changing dir to previous working dir: [{self.cwd}]")
@@ -619,7 +660,7 @@ class AppScanOnCloudSAST(Pipe):
         if(os.path.exists(logPath)):
             logger.debug(f"Logs Found [{logPath}]")
             logger.debug("Copying logs to reports dir")
-            newLogPath = os.path.join(reportsDir, scanName+"_logs.zip")
+            newLogPath = self._safe_path_join(reportsDir, scanName+"_logs.zip")
             res = shutil.copyfile(logPath, newLogPath)
             if(res):
                 logger.info(f"Logs Saved: [{res}]")

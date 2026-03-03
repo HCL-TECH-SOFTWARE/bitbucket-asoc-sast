@@ -91,7 +91,7 @@ DOWNLOAD_LOG_INTERVAL_SECS = 3
 # =============================================================================
 DOWNLOAD_CHUNK_SIZE = 4096
 BYTES_PER_MB = 1048576
-FILE_PERMISSION_MODE = 755
+FILE_PERMISSION_MODE = 0o755
 SECONDS_PER_DAY = 24 * 3600
 
 # =============================================================================

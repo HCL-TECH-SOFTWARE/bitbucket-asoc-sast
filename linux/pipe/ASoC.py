@@ -109,7 +109,9 @@ class ASoC:
         if scan_speed != "":
             args.extend(["-s", scan_speed])
         
-        stdoutFile = os.path.join(stdoutFilePath, scanName+'_stdout.txt')
+        # Sanitize scanName to prevent path traversal (strip directory separators and components)
+        safe_scan_name = os.path.basename(scanName)
+        stdoutFile = os.path.join(stdoutFilePath, safe_scan_name+'_stdout.txt')
         # Ensure the parent directory exists
         dir_path = os.path.dirname(stdoutFile)
         if dir_path and not os.path.exists(dir_path):
@@ -120,7 +122,7 @@ class ASoC:
             for line in iter(process.stdout.readline, b''):
                 writer.write(line)
                 if printio:
-                    sys.stdout.write(line.decode('ascii'))
+                    sys.stdout.write(line.decode('utf-8', errors='replace'))
                     sys.stdout.flush()
             process.wait()
         if(printio):
