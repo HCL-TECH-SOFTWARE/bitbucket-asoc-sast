@@ -36,6 +36,7 @@ import zipfile
 import re
 import datetime
 import shutil
+import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from constants import (
     VERSION,
@@ -117,6 +118,48 @@ class AppScanOnCloudSASTBase(Pipe):
     # ------------------------------------------------------------------
     # Shared utilities
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _get_repo_name_from_git(cwd=None):
+        """Attempt to derive a repo name from the git remote URL.
+
+        Runs ``git remote get-url origin`` in *cwd* (defaults to the
+        process working directory) and parses the result, handling both
+        SSH (``git@host:owner/repo.git``) and HTTPS
+        (``https://host/owner/repo.git``) formats.
+
+        Args:
+            cwd: Directory in which to run the git command.  Should be
+                 the cloned repository root so git can locate .git.
+
+        Returns:
+            A string such as ``owner/repo`` on success, or an empty
+            string when the remote cannot be determined.
+        """
+        try:
+            result = subprocess.run(
+                ["git", "remote", "get-url", "origin"],
+                capture_output=True, text=True, timeout=10,
+                cwd=cwd
+            )
+            url = result.stdout.strip()
+            if not url:
+                logger.warning("git remote get-url origin returned no output; cannot derive repo name")
+                return ""
+            # SSH format:  git@github.com:owner/repo.git
+            ssh_match = re.match(r"git@[^:]+:(.+?)(?:\.git)?$", url)
+            if ssh_match:
+                return ssh_match.group(1)
+            # HTTPS format: https://github.com/owner/repo.git
+            https_match = re.match(r"https?://[^/]+/(.+?)(?:\.git)?$", url)
+            if https_match:
+                return https_match.group(1)
+            logger.warning(f"Could not parse repo name from git remote URL: {url}")
+        except FileNotFoundError:
+            logger.warning("'git' binary not found in PATH; cannot derive repo name from remote URL")
+        except Exception as e:
+            logger.warning(f"Unexpected error running git to derive repo name: {e}")
+        return ""
 
     @staticmethod
     def _safe_path_join(base_dir, *paths):
@@ -213,9 +256,23 @@ class AppScanOnCloudSASTBase(Pipe):
             logger.setLevel('DEBUG')
             logger.info("Debug logging enabled")
 
-        # Use Bitbucket repo name if scan name not provided
+        # Use Bitbucket repo name if scan name not provided;
+        # fall back to git remote URL if the Bitbucket repo name is also absent.
+        # fall back to APP_ID if neither is available.
+        # Append a timestamp so derived names are unique per run.
         if not scanName:
-            scanName = self.repo_full_name
+            if self.repo:
+                repo_name = self.repo
+            else:
+                logger.warning("BITBUCKET_REPO not set; attempting to derive repo name from git remote")
+                repo_name = self._get_repo_name_from_git(cwd=self.cloneDir)
+                if repo_name:
+                    logger.warning(f"Derived repo name from git remote: {repo_name}")
+                else:
+                    logger.warning(f"Could not determine repo name from git remote; falling back to APP_ID: {self.appID}")
+                    repo_name = self.appID
+            timestamp = self.getTimeStamp()
+            scanName = f"{repo_name}_{timestamp}" if repo_name else timestamp
 
         # Valid chars for a scan name: alphanumeric + [.-_ ]
         scanName = re.sub(SCAN_NAME_VALID_CHARS_REGEX, SCAN_NAME_REPLACEMENT_CHAR, scanName)
@@ -501,19 +558,19 @@ class AppScanOnCloudSASTBase(Pipe):
         # Write shell-sourceable environment variables
         with open(envFile, 'w') as f:
             if sast_scan_id:
-                f.write(f"export ASOC_SAST_SCAN_ID='{sast_scan_id}'\n")
-                f.write(f"export ASOC_SAST_SCAN_URL='{self.asoc.getDataCenterURL()}/main/myapps/{self.appID}/scans/{sast_scan_id}'\n")
+                f.write(f"export SAST_SCAN_ID='{sast_scan_id}'\n")
+                f.write(f"export SAST_SCAN_URL='{self.asoc.getDataCenterURL()}/main/myapps/{self.appID}/scans/{sast_scan_id}'\n")
             if sca_scan_id:
-                f.write(f"export ASOC_SCA_SCAN_ID='{sca_scan_id}'\n")
-                f.write(f"export ASOC_SCA_SCAN_URL='{self.asoc.getDataCenterURL()}/main/myapps/{self.appID}/scans/{sca_scan_id}'\n")
-            f.write(f"export ASOC_SCAN_NAME='{summary['scan_name']}'\n")
-            f.write(f"export ASOC_TOTAL_ISSUES={summary['total_issues']}\n")
-            f.write(f"export ASOC_CRITICAL_ISSUES={summary['critical_issues']}\n")
-            f.write(f"export ASOC_HIGH_ISSUES={summary['high_issues']}\n")
-            f.write(f"export ASOC_MEDIUM_ISSUES={summary['medium_issues']}\n")
-            f.write(f"export ASOC_LOW_ISSUES={summary['low_issues']}\n")
-            f.write(f"export ASOC_INFO_ISSUES={summary['info_issues']}\n")
-            f.write(f"export ASOC_SCAN_DURATION_SECONDS={summary['duration_seconds']}\n")
+                f.write(f"export SCA_SCAN_ID='{sca_scan_id}'\n")
+                f.write(f"export SCA_SCAN_URL='{self.asoc.getDataCenterURL()}/main/myapps/{self.appID}/scans/{sca_scan_id}'\n")
+            f.write(f"export SCAN_NAME='{summary['scan_name']}'\n")
+            f.write(f"export TOTAL_ISSUES={summary['total_issues']}\n")
+            f.write(f"export CRITICAL_ISSUES={summary['critical_issues']}\n")
+            f.write(f"export HIGH_ISSUES={summary['high_issues']}\n")
+            f.write(f"export MEDIUM_ISSUES={summary['medium_issues']}\n")
+            f.write(f"export LOW_ISSUES={summary['low_issues']}\n")
+            f.write(f"export INFO_ISSUES={summary['info_issues']}\n")
+            f.write(f"export SCAN_DURATION_SECONDS={summary['duration_seconds']}\n")
 
         logger.info(f"Scan results exported to: {outputFile}")
         logger.info(f"Environment variables exported to: {envFile}")
@@ -552,7 +609,7 @@ class AppScanOnCloudSASTBase(Pipe):
         logger.info("To use these outputs in your bitbucket-pipelines.yml:")
         logger.info("1. Add artifacts section to preserve reports/")
         logger.info("2. Source the environment file: source reports/scan_env.sh")
-        logger.info("3. Use variables like $ASOC_CRITICAL_ISSUES in next steps")
+        logger.info("3. Use variables like $CRITICAL_ISSUES in next steps")
         logger.info("=" * 55)
 
     # ------------------------------------------------------------------

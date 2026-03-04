@@ -25,7 +25,7 @@ import platform
 import os
 import json
 from constants import (
-    CLIENT_TYPE_FORMAT, DATACENTER_EU, DATACENTER_NA, DATACENTER_URL_ASOC_EU, DATACENTER_URL_ASOC_US,
+    CLIENT_TYPE_A360_FORMAT, CLIENT_TYPE_FORMAT, DATACENTER_EU, DATACENTER_NA, DATACENTER_URL_ASOC_EU, DATACENTER_URL_ASOC_US,
     API_LOGIN, API_LOGOUT, API_TENANT_INFO, API_FILE_UPLOAD,
     API_SAST_SCAN, API_SCA_SCAN, API_SCAN_EXECUTIONS, API_APPS,
     API_SAST_EXECUTION, API_SCA_EXECUTION,
@@ -414,7 +414,11 @@ class ASoC:
         return datetime.datetime.fromtimestamp(ts).strftime(TIMESTAMP_FORMAT)
 
     def getClientType(self):
-        os_name = platform.system().lower()
-        client_type = CLIENT_TYPE_FORMAT.replace("<os>", os_name).replace("<plugin-version>", VERSION)
+        if "local_" in self.base_url.lower():
+            client_type = CLIENT_TYPE_A360_FORMAT.replace("<plugin-version>", VERSION)
+        else:
+            os_name = platform.system().lower()
+            client_type = CLIENT_TYPE_FORMAT.replace("<os>", os_name).replace("<plugin-version>", VERSION)
+        
         self.logger.info(f"Client Type: {client_type}")
         return client_type

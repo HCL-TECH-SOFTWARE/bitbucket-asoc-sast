@@ -130,3 +130,4 @@ MSG_ASOC_APP_SUMMARY_ERROR = "ASoC App Summary Error Response"
 # =============================================================================
 TIMESTAMP_FORMAT = '%Y-%m-%d_%H-%M-%S'
 CLIENT_TYPE_FORMAT = "bitbucket-<os>-<plugin-version>"
+CLIENT_TYPE_A360_FORMAT = "bitbucket-<plugin-version>"
