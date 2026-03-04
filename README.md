@@ -114,16 +114,18 @@ The pipe now exports scan results that can be used in subsequent pipeline steps.
 - `{scanName}.json` - Complete JSON scan summary
 
 **Exported Variables:**
-- `ASOC_SCAN_ID` - The scan ID in AppScan on Cloud
-- `ASOC_SCAN_NAME` - Name of the scan
-- `ASOC_TOTAL_ISSUES` - Total number of issues found
-- `ASOC_CRITICAL_ISSUES` - Number of critical severity issues
-- `ASOC_HIGH_ISSUES` - Number of high severity issues
-- `ASOC_MEDIUM_ISSUES` - Number of medium severity issues
-- `ASOC_LOW_ISSUES` - Number of low severity issues
-- `ASOC_INFO_ISSUES` - Number of informational issues
-- `ASOC_SCAN_DURATION_SECONDS` - Scan duration in seconds
-- `ASOC_SCAN_URL` - Direct URL to view scan results in AppScan on Cloud
+- `SAST_SCAN_ID` - The SAST scan ID in AppScan on Cloud
+- `SAST_SCAN_URL` - Direct URL to view SAST scan results in AppScan on Cloud
+- `SCA_SCAN_ID` - The SCA scan ID in AppScan on Cloud (if SCA scan was run)
+- `SCA_SCAN_URL` - Direct URL to view SCA scan results in AppScan on Cloud (if SCA scan was run)
+- `SCAN_NAME` - Name of the scan
+- `TOTAL_ISSUES` - Total number of issues found
+- `CRITICAL_ISSUES` - Number of critical severity issues
+- `HIGH_ISSUES` - Number of high severity issues
+- `MEDIUM_ISSUES` - Number of medium severity issues
+- `LOW_ISSUES` - Number of low severity issues
+- `INFO_ISSUES` - Number of informational issues
+- `SCAN_DURATION_SECONDS` - Scan duration in seconds
 
 #### Example: Using Outputs in Next Steps
 
@@ -156,23 +158,31 @@ pipelines:
           - source reports/scan_env.sh
           
           # Display scan results
-          - echo "Scan ID: $ASOC_SCAN_ID"
-          - echo "Total Issues: $ASOC_TOTAL_ISSUES"
-          - echo "Critical Issues: $ASOC_CRITICAL_ISSUES"
-          - echo "High Issues: $ASOC_HIGH_ISSUES"
-          - echo "View Report: $ASOC_SCAN_URL"
+          - echo "Scan ID: $SAST_SCAN_ID"
+          - echo "View Report: $SAST_SCAN_URL"
+          - echo "Total Issues: $TOTAL_ISSUES"
+          - echo "Critical Issues: $CRITICAL_ISSUES"
+          - echo "High Issues: $HIGH_ISSUES"
+          - echo "Medium Issues: $MEDIUM_ISSUES"
+          - echo "Low Issues: $LOW_ISSUES"
           
-          # Fail the pipeline if critical or high issues found
+          # Fail the pipeline based on custom issue thresholds
           - |
-            if [ "$ASOC_CRITICAL_ISSUES" -gt 0 ]; then
-              echo "❌ Build failed: $ASOC_CRITICAL_ISSUES critical security issues found!"
+            if [ "$CRITICAL_ISSUES" -gt 10 ]; then
+              echo "❌ Build failed: $CRITICAL_ISSUES critical issues found (threshold: 10)!"
               exit 1
             fi
           - |
-            if [ "$ASOC_HIGH_ISSUES" -gt 5 ]; then
-              echo "❌ Build failed: Too many high severity issues ($ASOC_HIGH_ISSUES > 5)!"
+            if [ "$HIGH_ISSUES" -gt 5 ]; then
+              echo "❌ Build failed: $HIGH_ISSUES high severity issues found (threshold: 5)!"
               exit 1
             fi
+          - |
+            if [ "$MEDIUM_ISSUES" -gt 2 ]; then
+              echo "❌ Build failed: $MEDIUM_ISSUES medium severity issues found (threshold: 2)!"
+              exit 1
+            fi
+          - echo "✅ Security thresholds passed."
           
           # Upload report to external system (example)
           - curl -F "report=@reports/*.html" https://your-report-server.com/upload
@@ -193,15 +203,15 @@ pipelines:
           # Only deploy if security scan passed
           - source reports/scan_env.sh
           
-          # Check security threshold
+          # Check security threshold (>10 critical, >5 high, or >2 medium blocks deployment)
           - |
-            if [ "$ASOC_CRITICAL_ISSUES" -eq 0 ] && [ "$ASOC_HIGH_ISSUES" -lt 3 ]; then
+            if [ "$CRITICAL_ISSUES" -gt 10 ] || [ "$HIGH_ISSUES" -gt 5 ] || [ "$MEDIUM_ISSUES" -gt 2 ]; then
+              echo "⚠️ Security issues exceed thresholds. Manual review required."
+              echo "Critical: $CRITICAL_ISSUES (threshold: 10), High: $HIGH_ISSUES (threshold: 5), Medium: $MEDIUM_ISSUES (threshold: 2)"
+              exit 1
+            else
               echo "✅ Security scan passed. Deploying to production..."
               ./deploy.sh production
-            else
-              echo "⚠️ Security issues found. Manual review required."
-              echo "Critical: $ASOC_CRITICAL_ISSUES, High: $ASOC_HIGH_ISSUES"
-              exit 1
             fi
 ```
 
