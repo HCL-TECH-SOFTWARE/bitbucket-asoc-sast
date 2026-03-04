@@ -377,7 +377,7 @@ class AppScanOnCloudSASTBase(Pipe):
         logger.info("========== Step 2: Complete =======================\n")
 
         # Step 3: Run the Scan(s)
-        logger.info("========== Step 3: Run the Scan on ASoC ===========")
+        logger.info("========== Step 3: Run the Scan on ASoC/A360° =========")
         scan_result = self.runScan(scanName, self.appID, irxPath, comment, self.wait_for_analysis, self.personal_scan)
         if(scan_result is None):
             logger.error("Error creating scan(s)")
@@ -822,12 +822,12 @@ class AppScanOnCloudSASTBase(Pipe):
         - Neither: runs both SAST and SCA scans in parallel
         """
         # Verify that ASoC is logged in, if not then login
-        logger.debug("Login to ASoC")
+        logger.debug("Login to ASoC/A360°")
         if(not self.asoc.checkAuth()):
             if(self.asoc.login()):
-                logger.info("Successfully logged into ASoC API")
+                logger.info("Successfully logged into ASoC/A360° API")
             else:
-                logger.error("Error logging into ASoC!")
+                logger.error("Error logging into ASoC/A360°!")
                 return None
 
         # Verify that appId exists

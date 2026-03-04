@@ -15,7 +15,7 @@
 #
 
 """
-Platform-specific constants for the Linux ASoC SAST Bitbucket Pipe.
+Platform-specific constants for the Linux ASoC/A360° SAST Bitbucket Pipe.
 """
 
 SACLIENT_TOOL_TYPE = "linux"

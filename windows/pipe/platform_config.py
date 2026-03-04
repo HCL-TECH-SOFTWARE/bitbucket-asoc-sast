@@ -15,7 +15,7 @@
 #
 
 """
-Platform-specific constants for the Windows ASoC SAST Bitbucket Pipe.
+Platform-specific constants for the Windows ASoC/A360° SAST Bitbucket Pipe.
 """
 
 SACLIENT_TOOL_TYPE = "win"

@@ -110,20 +110,20 @@ SCAN_NAME_REPLACEMENT_CHAR = '_'
 # =============================================================================
 # Report Configuration Defaults
 # =============================================================================
-DEFAULT_REPORT_TITLE = "HCL ASoC SAST Security Report"
+DEFAULT_REPORT_TITLE = "HCL ASoC/A360° SAST Security Report"
 DEFAULT_REPORT_FILE_TYPE = "Html"
 
 # =============================================================================
 # User-Facing Messages
 # =============================================================================
 MSG_PIPE_NAME = "Executing Pipe: HCL AppScan on Cloud SAST"
-MSG_PIPELINE_ERROR = "Error Running ASoC SAST Pipeline"
-MSG_PIPELINE_SUCCESS = "ASoC SAST Pipeline Complete"
+MSG_PIPELINE_ERROR = "Error Running ASoC/A360° SAST Pipeline"
+MSG_PIPELINE_SUCCESS = "ASoC/A360° SAST Pipeline Complete"
 MSG_BOTH_OSO_SAO = "Both OSO and SAO selected"
 MSG_SCAN_COMMENT = "This scan was created via BitBucket Pipeline"
 MSG_ERROR_SUBMITTING_SCAN = "Error submitting scan"
-MSG_ASOC_REPORT_STATUS = "ASoC Report Status"
-MSG_ASOC_APP_SUMMARY_ERROR = "ASoC App Summary Error Response"
+MSG_ASOC_REPORT_STATUS = "ASoC/A360° Report Status"
+MSG_ASOC_APP_SUMMARY_ERROR = "ASoC/A360° App Summary Error Response"
 
 # =============================================================================
 # Timestamp Format

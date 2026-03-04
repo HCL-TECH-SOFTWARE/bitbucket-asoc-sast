@@ -16,7 +16,7 @@ The pipe has 19 variables.
 | REPO | Optional | The Repository name. Only really used to make filenames and comments relevant. |
 | BUILD_NUM | Optional | The Bitbucket build number. Used to make filenames and comments relevant. |
 | SCAN_NAME | Optional | The name of the scan in AppScan on Cloud. Default: "HCL_ASoC_SAST" |
-| DATACENTER | Optional | ASoC Datacenter to connect to: "NA" (default) or "EU", or an AppScan 360 url |
+| DATACENTER | Optional | ASoC/A360° Datacenter to connect to: "NA" (default) or "EU", or an AppScan 360 url |
 | DEBUG | Optional | If true, prints additional debug info to the log. Default: false |
 | STATIC_ANALYSIS_ONLY | Optional | If true, only prepare for static analysis during IRX generation. Default: false |
 | OPEN_SOURCE_ONLY | Optional | If true, only gather opensource information during IRX generation. Default: false |
