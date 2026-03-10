@@ -414,7 +414,7 @@ class ASoC:
         return datetime.datetime.fromtimestamp(ts).strftime(TIMESTAMP_FORMAT)
 
     def getClientType(self):
-        if "local_" in self.base_url.lower():
+        if "local_" in self.apikey.get("KeyId", ""):
             client_type = CLIENT_TYPE_A360_FORMAT.replace("<plugin-version>", VERSION)
         else:
             os_name = platform.system().lower()
