@@ -1,68 +1,106 @@
-# Bitbucket Pipe for HCL AppScan on Cloud Static Analysis
-This is a linux docker image that uses python to download the SAClientUtil from HCL AppScan on Cloud and run static analysis against an application in Bitbucket pipelines. The script also will wait for the scan to complete and download a scan summary json file and a scan report. These files are all placed in a directory "reports" so they can be saved as artifacts of the pipeline. See the bitbucket-pipelines.yml example below.
+# Linux Pipe Guide
 
-### Variables
+This image runs HCL AppScan on Cloud SAST scanning in Linux environments.
 
-The pipe has 13 variables.
+Use this guide when:
+- You run Bitbucket Cloud hosted Linux runners with `pipe:` syntax
+- You run self-hosted Linux runners with `docker run`
 
-| Variable |  Required | Description |
-|---|---|---|
-| API_KEY_ID | Required | The HCL AppScan on Cloud API Key ID |
-| API_KEY_SECRET | Required | The HCL AppScan on Cloud API Key Secret |
-| APP_ID | Required | The application Id of the app in AppScan on Cloud |
-| TARGET_DIR | Required | The directory to be scanned. Place scan targets here. |
-| CONFIG_FILE_PATH | Optional | Relative path from the repo root to an appscan config xml file. |
-| SECRET_SCANNING | Optional | True or False. Enables or disables the secret scanning feature. |
-| REPO | Optional | The Repository name. Only really used to make filenames and comments relevant. |
-| BUILD_NUM | Optional | The Bitbucket build number. Used to make filenames and comments relevant. |
-| SCAN_NAME | Optional | The name of the scan in AppScan on Cloud |
-| DATACENTER | Optional | ASoC Datacenter to connect to: "NA" (default) or "EU", or an AppScan 360 url |
-| DEBUG | Optional | If true, prints additional debug info to the log. |
-| STATIC_ANALYSIS_ONLY | Optional | If true, only prepare for static analysis during IRX generation. |
-| OPEN_SOURCE_ONLY | Optional | If true, only gather opensource information during IRX generation. |
+For full project docs, see `README.md` at repo root.
 
-**Note about specifying a config file. Providing a config file can override other settings like `TARGET_DIR` or `SECRET_SCANNING`
+## Recommended Usage Modes
 
-### Example bitbucket-pipelines.yml step
+## 1. Bitbucket Cloud (hosted Linux)
 
-The following is the bitbucket-pipelines.yml file from my demo repository that makes use of this custom pipe.
+Use `pipe:` syntax:
 
 ```yaml
-image: gradle:6.6.0
-
-pipelines:
-  default:    
-    - step:
-        name: Build and Test
-        caches:
-          - gradle
-        script:
-          - echo "$BITBUCKET_CLONE_DIR"
-          - cd "AltoroJ 3.1.1"
-          - pwd
-          - ls -la
-          - gradle build
-        artifacts:
-          - AltoroJ 3.1.1/build/libs/altoromutual.war
-        after-script:
-          - pipe: atlassian/checkstyle-report:0.2.0
-    - step:
-        name: ASoC SAST Scan
-        script:
-          # Custom Pipe to run Static Analysis via HCL AppScan on Cloud
-          # View README: https://github.com/cwtravis/bitbucket-asoc-sast-linux
-          - pipe: docker://cwtravis1/bitbucket_asoc_sast:1.0.1
-            variables:
-              # Required Variables
-              API_KEY_ID: $API_KEY_ID
-              API_KEY_SECRET: $API_KEY_SECRET
-              APP_ID: a4696e4a-a3c4-449b-b5e3-327fe05c02c3
-              TARGET_DIR: $BITBUCKET_CLONE_DIR/AltoroJ 3.1.1/build/libs
-              # Optional Variables
-              REPO: $BITBUCKET_REPO_FULL_NAME
-              BUILD_NUM: $BITBUCKET_BUILD_NUMBER
-              SCAN_NAME: "HCL_ASoC_SAST"
-              DEBUG: "false"
-        artifacts:
-          - reports/*
+- step:
+    name: ASoC Scan
+    script:
+      - pipe: docker://cwtravis1/bitbucket_asoc_sast:linux
+        variables:
+          API_KEY_ID: $API_KEY_ID
+          API_KEY_SECRET: $API_KEY_SECRET
+          APP_ID: $APP_ID
+          TARGET_DIR: $BITBUCKET_CLONE_DIR/build
+          WAIT_FOR_ANALYSIS: "true"
+    artifacts:
+      - reports/**
 ```
+
+Then evaluate in same step or next step:
+
+```yaml
+- source reports/scan_env.sh
+- echo "Critical=$CRITICAL_ISSUES High=$HIGH_ISSUES Medium=$MEDIUM_ISSUES"
+```
+
+## 2. Self-hosted Linux (`docker run`)
+
+Set `OUTPUT_DIR` to a mounted host path to make output files directly available without `docker cp`.
+
+```yaml
+- step:
+    name: ASoC Scan
+    runs-on:
+      - self.hosted
+      - linux.shell
+    script:
+      - mkdir -p "$BITBUCKET_CLONE_DIR/reports"
+      - docker run --rm \
+          -e API_KEY_ID="$API_KEY_ID" \
+          -e API_KEY_SECRET="$API_KEY_SECRET" \
+          -e APP_ID="$APP_ID" \
+          -e TARGET_DIR="$BITBUCKET_CLONE_DIR/build" \
+          -e OUTPUT_DIR="$BITBUCKET_CLONE_DIR/reports" \
+          -e WAIT_FOR_ANALYSIS="true" \
+          -v "$BITBUCKET_CLONE_DIR:$BITBUCKET_CLONE_DIR" \
+          cwtravis1/bitbucket_asoc_sast:linux
+      - source "$BITBUCKET_CLONE_DIR/reports/scan_env.sh"
+      - echo "Critical=$CRITICAL_ISSUES High=$HIGH_ISSUES Medium=$MEDIUM_ISSUES"
+    artifacts:
+      - reports/**
+```
+
+## Important Variables
+
+Required:
+- `API_KEY_ID`
+- `API_KEY_SECRET`
+- `APP_ID`
+- `TARGET_DIR`
+
+Common optional:
+- `DATACENTER` (`NA`, `EU`, or custom URL)
+- `WAIT_FOR_ANALYSIS`
+- `FAIL_FOR_NONCOMPLIANCE`
+- `FAILURE_THRESHOLD`
+- `STATIC_ANALYSIS_ONLY`
+- `OPEN_SOURCE_ONLY`
+- `SCAN_SPEED`
+- `OUTPUT_DIR` (primarily for self-hosted `docker run`)
+
+## Output Files
+
+The pipe writes scan results to `reports/`:
+- `scan_env.sh`
+- `scan_output.json`
+- `scan_results.txt`
+- `report_paths.txt`
+- `*_sast.html`, `*_sast.json`
+- `*_sca.html`, `*_sca.json` (if SCA ran)
+
+## Applying Your Own Security Policy
+
+Example:
+
+```bash
+source reports/scan_env.sh
+if [ "$CRITICAL_ISSUES" -gt 10 ] || [ "$HIGH_ISSUES" -gt 1 ] || [ "$MEDIUM_ISSUES" -gt 1 ]; then
+  echo "Security thresholds exceeded"
+  exit 1
+fi
+```
+
+You can also parse `reports/scan_output.json` if you prefer not to source shell files.
