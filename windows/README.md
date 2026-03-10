@@ -1,17 +1,25 @@
 # Windows Pipe Guide
 
-This image runs HCL AppScan on Cloud SAST scanning in Windows container environments.
+This image runs the AppScan Bitbucket pipe in Windows container environments.
 
 Use this guide when:
 - You run self-hosted Windows Bitbucket runners
 - Docker is configured for Windows containers
 
-For full project docs, see `README.md` at repo root.
+For repository-wide documentation, see the root `README.md`.
 
 ## Scope and Limitation
 
 - Bitbucket Cloud hosted runners do not support Windows containers.
 - This image is intended for self-hosted Windows runners.
+
+## Runtime Behavior
+
+- The container downloads SAClientUtil for Windows (`appscan.bat`)
+- It packages `TARGET_DIR` into IRX and submits scan(s)
+- It runs SAST, SCA, or both depending on flags
+- If `WAIT_FOR_ANALYSIS=true` (default), it waits for completion and writes reports/results
+- If `WAIT_FOR_ANALYSIS=false`, it exits after submission with no summary/report export files
 
 ## Minimal Self-Hosted Windows Example
 
@@ -35,11 +43,16 @@ pipelines:
                   -v "${localPath}:C:\src" `
                   cwtravis1/bitbucket_asoc_sast:windows
 
-          # Load exported variables
-          - . reports\scan_env.ps1
-          - Write-Host "Critical=$env:CRITICAL_ISSUES High=$env:HIGH_ISSUES Medium=$env:MEDIUM_ISSUES"
+          # Parse KEY=VALUE output from scan_results.txt
+          - $result = @{}
+          - Get-Content "$env:BITBUCKET_CLONE_DIR\reports\scan_results.txt" | ForEach-Object {
+              if ($_ -match '^(?<k>[^=]+)=(?<v>.*)$') {
+                $result[$Matches.k] = $Matches.v
+              }
+            }
+          - Write-Host "Critical=$($result.CRITICAL_ISSUES) High=$($result.HIGH_ISSUES) Medium=$($result.MEDIUM_ISSUES)"
           - |
-            if ([int]$env:CRITICAL_ISSUES -gt 10 -or [int]$env:HIGH_ISSUES -gt 1 -or [int]$env:MEDIUM_ISSUES -gt 1) {
+            if ([int]$result.CRITICAL_ISSUES -gt 10 -or [int]$result.HIGH_ISSUES -gt 1 -or [int]$result.MEDIUM_ISSUES -gt 1) {
               Write-Host "Security thresholds exceeded"
               exit 1
             }
@@ -58,39 +71,32 @@ pipelines:
 
 - `DATACENTER` (`NA`, `EU`, or custom URL)
 - `WAIT_FOR_ANALYSIS`
-- `FAIL_FOR_NONCOMPLIANCE`
-- `FAILURE_THRESHOLD`
 - `STATIC_ANALYSIS_ONLY`
 - `OPEN_SOURCE_ONLY`
 - `SCAN_SPEED`
+- `PERSONAL_SCAN`
+- `FAIL_FOR_NONCOMPLIANCE`
+- `FAILURE_THRESHOLD`
+- `CONFIG_FILE_PATH`
+- `SECRET_SCANNING`
+- `ALLOW_UNTRUSTED`
 - `DEBUG`
 
-## Output Files and Variables
+## Output Files
 
-The scan writes outputs to `reports/`:
-- `scan_env.ps1` for PowerShell environment loading
-- `scan_output.json` for programmatic use
-- `scan_results.txt` for text-based parsing
-- SAST and optional SCA report/summary files
+When waiting for analysis, outputs are written to `reports/`:
+- `scan_results.txt`
+- `scan_env.sh` (shell export format, useful mainly in Bash environments)
+- `report_paths.txt`
+- `{scanName}_sast.html` and `{scanName}_sast.json` (if SAST ran)
+- `{scanName}_sca.html` and `{scanName}_sca.json` (if SCA ran)
+- `{scanName}_stdout.txt`
+- `{scanName}_logs.zip` (if generated)
 
-Common exported variables:
-- `SAST_SCAN_ID`, `SAST_SCAN_URL`
-- `SCA_SCAN_ID`, `SCA_SCAN_URL` (if SCA ran)
-- `CRITICAL_ISSUES`, `HIGH_ISSUES`, `MEDIUM_ISSUES`, `LOW_ISSUES`, `INFO_ISSUES`
-- `TOTAL_ISSUES`, `SCAN_NAME`, `SCAN_DURATION_SECONDS`
-
-## Alternate: JSON Parsing (No Dot-Sourcing)
-
-```powershell
-$r = Get-Content reports\scan_output.json | ConvertFrom-Json
-if ([int]$r.CRITICAL_ISSUES -gt 10 -or [int]$r.HIGH_ISSUES -gt 1) {
-  Write-Host "Security thresholds exceeded"
-  exit 1
-}
-```
+Current implementation does not generate `scan_env.ps1` or `scan_output.json`.
 
 ## Troubleshooting
 
 - Confirm Docker is reachable: `docker version`
-- Confirm runner path mount: `Resolve-Path $env:BITBUCKET_CLONE_DIR`
-- If output files are missing, check container logs and ensure `TARGET_DIR` exists inside mounted path
+- Confirm runner mount path resolves: `Resolve-Path $env:BITBUCKET_CLONE_DIR`
+- If output files are missing, verify `WAIT_FOR_ANALYSIS=true` and that `TARGET_DIR` exists inside the mounted path

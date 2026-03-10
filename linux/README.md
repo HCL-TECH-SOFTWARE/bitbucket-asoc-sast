@@ -1,18 +1,22 @@
 # Linux Pipe Guide
 
-This image runs HCL AppScan on Cloud SAST scanning in Linux environments.
+This image runs the AppScan Bitbucket pipe in Linux environments.
 
-Use this guide when:
-- You run Bitbucket Cloud hosted Linux runners with `pipe:` syntax
-- You run self-hosted Linux runners with `docker run`
+Use this guide for:
+- Bitbucket Cloud hosted Linux runners (`pipe:` syntax)
+- Self-hosted Linux runners (`docker run`)
 
-For full project docs, see `README.md` at repo root.
+For repository-wide documentation, see the root `README.md`.
 
-## Recommended Usage Modes
+## Runtime Behavior
 
-## 1. Bitbucket Cloud (hosted Linux)
+- The container downloads SAClientUtil for Linux (`appscan.sh`)
+- It packages `TARGET_DIR` into IRX and submits scan(s)
+- It runs SAST, SCA, or both depending on flags
+- If `WAIT_FOR_ANALYSIS=true` (default), it waits for completion and generates reports
+- If `WAIT_FOR_ANALYSIS=false`, it exits after submission with no summary/report export files
 
-Use `pipe:` syntax:
+## Example: Bitbucket Cloud Hosted Linux
 
 ```yaml
 - step:
@@ -24,21 +28,22 @@ Use `pipe:` syntax:
           API_KEY_SECRET: $API_KEY_SECRET
           APP_ID: $APP_ID
           TARGET_DIR: $BITBUCKET_CLONE_DIR/build
+          DATACENTER: "NA"
           WAIT_FOR_ANALYSIS: "true"
     artifacts:
       - reports/**
 ```
 
-Then evaluate in same step or next step:
+Consume results in same step or next step:
 
-```yaml
-- source reports/scan_env.sh
-- echo "Critical=$CRITICAL_ISSUES High=$HIGH_ISSUES Medium=$MEDIUM_ISSUES"
+```bash
+source reports/scan_env.sh
+echo "Critical=$CRITICAL_ISSUES High=$HIGH_ISSUES Medium=$MEDIUM_ISSUES"
 ```
 
-## 2. Self-hosted Linux (`docker run`)
+## Example: Self-Hosted Linux with `docker run`
 
-Set `OUTPUT_DIR` to a mounted host path to make output files directly available without `docker cp`.
+Set `OUTPUT_DIR` to a mounted host path so outputs are directly available on the runner host.
 
 ```yaml
 - step:
@@ -53,17 +58,18 @@ Set `OUTPUT_DIR` to a mounted host path to make output files directly available 
           -e API_KEY_SECRET="$API_KEY_SECRET" \
           -e APP_ID="$APP_ID" \
           -e TARGET_DIR="$BITBUCKET_CLONE_DIR/build" \
-          -e OUTPUT_DIR="$BITBUCKET_CLONE_DIR/reports" \
+          -e DATACENTER="NA" \
           -e WAIT_FOR_ANALYSIS="true" \
+          -e OUTPUT_DIR="$BITBUCKET_CLONE_DIR/reports" \
           -v "$BITBUCKET_CLONE_DIR:$BITBUCKET_CLONE_DIR" \
           cwtravis1/bitbucket_asoc_sast:linux
       - source "$BITBUCKET_CLONE_DIR/reports/scan_env.sh"
-      - echo "Critical=$CRITICAL_ISSUES High=$HIGH_ISSUES Medium=$MEDIUM_ISSUES"
+      - echo "Total issues: $TOTAL_ISSUES"
     artifacts:
       - reports/**
 ```
 
-## Important Variables
+## Variables
 
 Required:
 - `API_KEY_ID`
@@ -71,36 +77,40 @@ Required:
 - `APP_ID`
 - `TARGET_DIR`
 
-Common optional:
+Frequently used optional:
 - `DATACENTER` (`NA`, `EU`, or custom URL)
 - `WAIT_FOR_ANALYSIS`
-- `FAIL_FOR_NONCOMPLIANCE`
-- `FAILURE_THRESHOLD`
 - `STATIC_ANALYSIS_ONLY`
 - `OPEN_SOURCE_ONLY`
 - `SCAN_SPEED`
-- `OUTPUT_DIR` (primarily for self-hosted `docker run`)
+- `PERSONAL_SCAN`
+- `FAIL_FOR_NONCOMPLIANCE`
+- `FAILURE_THRESHOLD`
+- `CONFIG_FILE_PATH`
+- `SECRET_SCANNING`
+- `OUTPUT_DIR`
+- `ALLOW_UNTRUSTED`
+- `DEBUG`
 
 ## Output Files
 
-The pipe writes scan results to `reports/`:
-- `scan_env.sh`
-- `scan_output.json`
+When waiting for analysis, outputs are written to `reports/`:
 - `scan_results.txt`
+- `scan_env.sh`
 - `report_paths.txt`
-- `*_sast.html`, `*_sast.json`
-- `*_sca.html`, `*_sca.json` (if SCA ran)
+- `{scanName}_sast.html` and `{scanName}_sast.json` (if SAST ran)
+- `{scanName}_sca.html` and `{scanName}_sca.json` (if SCA ran)
+- `{scanName}_stdout.txt`
+- `{scanName}_logs.zip` (if generated)
 
-## Applying Your Own Security Policy
+There is no `scan_output.json` output in the current implementation.
 
-Example:
+## Enforcing Policy in Pipeline Code
 
 ```bash
 source reports/scan_env.sh
-if [ "$CRITICAL_ISSUES" -gt 10 ] || [ "$HIGH_ISSUES" -gt 1 ] || [ "$MEDIUM_ISSUES" -gt 1 ]; then
+if [ "$CRITICAL_ISSUES" -gt 0 ] || [ "$HIGH_ISSUES" -gt 0 ]; then
   echo "Security thresholds exceeded"
   exit 1
 fi
 ```
-
-You can also parse `reports/scan_output.json` if you prefer not to source shell files.
