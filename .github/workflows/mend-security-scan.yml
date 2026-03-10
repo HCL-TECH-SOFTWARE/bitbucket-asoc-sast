@@ -63,7 +63,7 @@ jobs:
         env:
           MEND_API_KEY: ${{ secrets.MEND_KEY }}
         run: |
-          echo "docker.includes=bitbucket_asoc_sast_linux:${{ github.run_id }}" >> linux/wss-unified-agent.config
+          echo "docker.includes=bitbucket_asoc_sast_linux:*" >> linux/wss-unified-agent.config
           java -jar wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar -apiKey "${MEND_API_KEY}" -c linux/wss-unified-agent.config
 
   scan-windows:
@@ -147,5 +147,5 @@ jobs:
         env:
           MEND_API_KEY: ${{ secrets.MEND_KEY }}
         run: |
-          Add-Content -Path windows/wss-unified-agent.config -Value "docker.includes=bitbucket_asoc_sast_windows:${{ github.run_id }}"
+          Add-Content -Path windows/wss-unified-agent.config -Value "docker.includes=bitbucket_asoc_sast_windows:*"
           java -jar "wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar" -apiKey "$env:MEND_API_KEY" -c windows/wss-unified-agent.config

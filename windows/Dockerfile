@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:5.0.401-windowsservercore-ltsc2019
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
 
 RUN powershell -Command (Get-WMIObject win32_operatingsystem).name
 
