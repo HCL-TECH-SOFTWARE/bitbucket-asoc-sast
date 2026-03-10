@@ -6,7 +6,7 @@ permissions:
 
 on:
   pull_request:
-    branches: [main]
+    branches: [ASPL-1464]
     types: [opened, synchronize]
 
 jobs:
