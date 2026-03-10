@@ -20,15 +20,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for dependency file changes
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            dependencies:
-              - 'linux/requirements.txt'
-              - 'linux/Dockerfile'
-              - 'common/**'
+      # - name: Check for dependency file changes
+      #   uses: dorny/paths-filter@v3
+      #   id: filter
+      #   with:
+      #     filters: |
+      #       dependencies:
+      #         - 'linux/requirements.txt'
+      #         - 'linux/Dockerfile'
+      #         - 'common/**'
 
       # - name: Skip if no dependency changes
       #   if: github.event.action != 'opened' && steps.filter.outputs.dependencies != 'true'
@@ -65,15 +65,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for dependency file changes
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            dependencies:
-              - 'windows/requirements.txt'
-              - 'windows/Dockerfile'
-              - 'common/**'
+      # - name: Check for dependency file changes
+      #   uses: dorny/paths-filter@v3
+      #   id: filter
+      #   with:
+      #     filters: |
+      #       dependencies:
+      #         - 'windows/requirements.txt'
+      #         - 'windows/Dockerfile'
+      #         - 'common/**'
 
       # - name: Skip if no dependency changes
       #   if: github.event.action != 'opened' && steps.filter.outputs.dependencies != 'true'
