@@ -36,7 +36,16 @@ jobs:
 
       - name: Build Linux Docker image
         # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-        run: docker build -f linux/Dockerfile -t bitbucket_asoc_sast_linux:${{ github.run_id }} .
+        run: docker build --load -f linux/Dockerfile -t bitbucket_asoc_sast_linux:${{ github.run_id }} .
+
+      - name: Verify Linux Docker image is available
+        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+        run: |
+          docker images bitbucket_asoc_sast_linux:${{ github.run_id }}
+          if ! docker inspect bitbucket_asoc_sast_linux:${{ github.run_id }} > /dev/null 2>&1; then
+            echo "ERROR: Docker image bitbucket_asoc_sast_linux:${{ github.run_id }} not found in local store."
+            exit 1
+          fi
 
       - uses: actions/setup-java@v3
         # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
@@ -80,6 +89,23 @@ jobs:
       #   if: github.event.action != 'opened' && steps.filter.outputs.dependencies != 'true'
       #   run: echo "No relevant changes for Windows image, skipping scan."
 
+      - name: Start Docker service
+        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+        run: |
+          Start-Service docker
+          $timeout = 60
+          $elapsed = 0
+          do {
+            Start-Sleep -Seconds 5
+            $elapsed += 5
+            $status = (Get-Service docker).Status
+            Write-Host "Docker service status: $status ($elapsed s elapsed)"
+          } while ($status -ne 'Running' -and $elapsed -lt $timeout)
+          if ($status -ne 'Running') {
+            Write-Error "Docker service did not start within $timeout seconds."
+            exit 1
+          }
+
       - name: Verify Docker is in Windows containers mode
         # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         run: |
@@ -94,6 +120,16 @@ jobs:
       - name: Build Windows Docker image
         # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         run: docker build -f windows/Dockerfile -t bitbucket_asoc_sast_windows:${{ github.run_id }} .
+
+      - name: Verify Windows Docker image is available
+        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+        run: |
+          docker images bitbucket_asoc_sast_windows:${{ github.run_id }}
+          $exists = docker inspect bitbucket_asoc_sast_windows:${{ github.run_id }} 2>&1
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Docker image bitbucket_asoc_sast_windows:${{ github.run_id }} not found in local store."
+            exit 1
+          }
 
       - uses: actions/setup-java@v3
         # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
