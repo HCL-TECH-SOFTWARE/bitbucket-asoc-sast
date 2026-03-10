@@ -30,9 +30,9 @@ jobs:
               - 'linux/Dockerfile'
               - 'common/**'
 
-      - name: Skip if no dependency changes
-        if: github.event.action != 'opened' && steps.filter.outputs.dependencies != 'true'
-        run: echo "No relevant changes for Linux image, skipping scan."
+      # - name: Skip if no dependency changes
+      #   if: github.event.action != 'opened' && steps.filter.outputs.dependencies != 'true'
+      #   run: echo "No relevant changes for Linux image, skipping scan."
 
       - name: Build Linux Docker image
         if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
@@ -75,9 +75,9 @@ jobs:
               - 'windows/Dockerfile'
               - 'common/**'
 
-      - name: Skip if no dependency changes
-        if: github.event.action != 'opened' && steps.filter.outputs.dependencies != 'true'
-        run: echo "No relevant changes for Windows image, skipping scan."
+      # - name: Skip if no dependency changes
+      #   if: github.event.action != 'opened' && steps.filter.outputs.dependencies != 'true'
+      #   run: echo "No relevant changes for Windows image, skipping scan."
 
       - name: Switch Docker to Windows containers
         if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
