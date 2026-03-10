@@ -1,94 +1,90 @@
 # Bitbucket Pipe for HCL AppScan on Cloud SAST
 
-This repository provides Docker-based Bitbucket pipeline integrations for HCL AppScan on Cloud SAST scanning.
+This repository provides Docker-based Bitbucket pipeline integrations for HCL AppScan on Cloud and AppScan 360 SAST/SCA scanning.
 
-It supports:
-- Linux-based usage in Bitbucket Cloud and self-hosted Linux runners
-- Windows-based usage in self-hosted Windows runners
+Current release in code: `2.0.0`
 
-The scan flow is:
-1. Build your application
-2. Run the ASoC scan pipe
-3. Read scan output variables from generated files
-4. Apply your own security policy logic in pipeline code
+Supported runner models:
+- Linux image on Bitbucket Cloud hosted Linux runners (`pipe:` syntax)
+- Linux image on self-hosted Linux runners (`docker run`)
+- Windows image on self-hosted Windows runners (`docker run` in Windows container mode)
 
-## What This Repo Contains
+## Repository Layout
 
-- `common/`: shared Python scan logic for Linux and Windows
-- `linux/`: Linux image and Linux docs
-- `windows/`: Windows image and Windows docs
-- `run-asoc-scan.sh`: local Linux test helper
-- `run-asoc-scan.ps1`: local Windows test helper
+- `common/`: shared Python implementation used by Linux and Windows images
+- `linux/`: Linux Dockerfile, pipe metadata, and Linux-specific thin wrapper
+- `windows/`: Windows Dockerfile, pipe metadata, and Windows-specific thin wrapper
+- `appscan-config.xml`: sample AppScan configuration file
 
-## Hosted vs Self-Hosted
+## Runtime Flow
 
-### Bitbucket Cloud (hosted Linux runners)
-Use Bitbucket `pipe:` syntax (recommended).
+The pipe executes these stages:
+1. Validate inputs and prepare working folders
+2. Download and extract SAClientUtil
+3. Generate IRX from `TARGET_DIR`
+4. Submit scan(s) (SAST, SCA, or both depending on flags)
+5. Optionally wait for completion (`WAIT_FOR_ANALYSIS=true`)
+6. Export results and download HTML reports (only when waiting for completion)
 
-### Self-hosted Linux runners
-Use `docker run` and set `OUTPUT_DIR` so output files are copied to your mounted host path.
-
-### Self-hosted Windows runners
-Use `docker run` in Windows container mode and load `reports\\scan_env.ps1`.
+If `WAIT_FOR_ANALYSIS=false`, the pipe exits after scan submission and does not generate summary/report files.
 
 ## Variables
 
-The pipe supports 20 variables.
+Schema-defined variables in current code:
 
-| Variable | Required | Description |
-|---|---|---|
-| `API_KEY_ID` | Yes | HCL AppScan on Cloud API key ID |
-| `API_KEY_SECRET` | Yes | HCL AppScan on Cloud API key secret |
-| `APP_ID` | Yes | Target application ID in AppScan |
-| `TARGET_DIR` | Yes | Directory to scan |
-| `DATACENTER` | No | `NA` (default), `EU`, or custom AppScan 360 URL |
-| `SCAN_NAME` | No | Scan name in AppScan. If empty, auto-derived |
-| `CONFIG_FILE_PATH` | No | Path to appscan config file |
-| `SECRET_SCANNING` | No | `true` or `false` |
-| `STATIC_ANALYSIS_ONLY` | No | `true` or `false` |
-| `OPEN_SOURCE_ONLY` | No | `true` or `false` |
-| `SCAN_SPEED` | No | `simple`, `balanced`, `deep`, `thorough` |
-| `PERSONAL_SCAN` | No | `true` or `false` |
-| `WAIT_FOR_ANALYSIS` | No | Wait for completion before exit. Default: `true` |
-| `FAIL_FOR_NONCOMPLIANCE` | No | Fail the step based on severity threshold |
-| `FAILURE_THRESHOLD` | No | `Critical`, `High`, `Medium`, `Low`, `Informational` |
-| `ALLOW_UNTRUSTED` | No | Disable TLS certificate validation |
-| `DEBUG` | No | Enable debug logging |
-| `REPO` | No | Optional repo name metadata |
-| `BUILD_NUM` | No | Optional build number metadata |
-| `OUTPUT_DIR` | No | Additional output location (mainly for self-hosted `docker run`) |
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `API_KEY_ID` | Yes | - | AppScan API key ID |
+| `API_KEY_SECRET` | Yes | - | AppScan API key secret |
+| `APP_ID` | Yes | - | Target App ID in AppScan |
+| `TARGET_DIR` | Yes | `./` | Directory to package and scan |
+| `SCAN_NAME` | No | empty | Scan name. If empty, auto-generated from repo/app id + timestamp |
+| `DATACENTER` | No | `NA` | `NA`, `EU`, or full custom base URL |
+| `CONFIG_FILE_PATH` | No | empty | AppScan config file path (absolute or relative to container working dir) |
+| `SECRET_SCANNING` | No | `None` | Enables/disables secrets scan mode when supported by SAClient |
+| `STATIC_ANALYSIS_ONLY` | No | `false` | Run SAST only |
+| `OPEN_SOURCE_ONLY` | No | `false` | Run SCA only |
+| `SCAN_SPEED` | No | empty | Optional SAClient scan speed value |
+| `PERSONAL_SCAN` | No | `false` | Create personal scan |
+| `WAIT_FOR_ANALYSIS` | No | `true` | Wait for completion and export results |
+| `FAIL_FOR_NONCOMPLIANCE` | No | `false` | Fail step when issues at/above threshold exist |
+| `FAILURE_THRESHOLD` | No | `Low` | `Critical`, `High`, `Medium`, `Low`, `Informational` |
+| `ALLOW_UNTRUSTED` | No | `false` | Disable TLS cert validation for API calls |
+| `DEBUG` | No | `false` | Enable debug logging |
+| `BUILD_NUM` | No | `0` | Optional build metadata used in report notes |
+| `OUTPUT_DIR` | No | empty | Additional location to copy generated output files |
+| `REPO` | No | empty | Present in schema (legacy/reserved) |
 
 Notes:
-- `OUTPUT_DIR` is optional. It is most useful in self-hosted Docker usage.
-- If `CONFIG_FILE_PATH` is provided, it may override other scan settings.
-- Do not use `ALLOW_UNTRUSTED=true` in production.
+- `STATIC_ANALYSIS_ONLY=true` and `OPEN_SOURCE_ONLY=true` cannot be used together.
+- `OUTPUT_DIR` is most useful with self-hosted `docker run` so outputs land on a mounted host path.
+- Avoid `ALLOW_UNTRUSTED=true` outside controlled test environments.
 
-## Output Files and Variables
+## Generated Output
 
-After scan completion, the pipe writes output into `reports/` and exports variables in multiple formats:
+When `WAIT_FOR_ANALYSIS=true`, the pipe writes outputs under `reports/` and optionally mirrors files to `OUTPUT_DIR`.
 
-| File | Format | Purpose |
-|---|---|---|
-| `scan_results.txt` | `KEY=VALUE` | Easy cross-platform parsing |
-| `scan_output.json` | JSON | Programmatic parsing |
-| `scan_env.sh` | bash exports | Linux shell `source` support |
-| `scan_env.ps1` | PowerShell | Windows `.` dot-source support |
-| `report_paths.txt` | `KEY=VALUE` | Paths to generated reports |
-| `{scanName}_sast.html` | HTML | SAST report |
-| `{scanName}_sca.html` | HTML | SCA report (if SCA ran) |
-| `{scanName}_sast.json` | JSON | SAST execution summary |
-| `{scanName}_sca.json` | JSON | SCA execution summary (if SCA ran) |
+| File | Description |
+|---|---|
+| `scan_results.txt` | Flat `KEY=VALUE` summary values |
+| `scan_env.sh` | Shell exports (`source reports/scan_env.sh`) |
+| `report_paths.txt` | Full paths to generated report/summary files |
+| `{scanName}_sast.html` | SAST HTML report (if SAST ran) |
+| `{scanName}_sca.html` | SCA HTML report (if SCA ran) |
+| `{scanName}_sast.json` | Raw SAST execution JSON (if SAST ran) |
+| `{scanName}_sca.json` | Raw SCA execution JSON (if SCA ran) |
+| `{scanName}_stdout.txt` | IRX generation stdout capture |
+| `{scanName}_logs.zip` | SAClient logs zip when generated |
 
-Common exported variables:
-- `SAST_SCAN_ID`, `SAST_SCAN_URL`
-- `SCA_SCAN_ID`, `SCA_SCAN_URL` (when SCA runs)
+Common exported values include:
+- `SAST_SCAN_ID`, `SAST_SCAN_URL` (if SAST ran)
+- `SCA_SCAN_ID`, `SCA_SCAN_URL` (if SCA ran)
 - `SCAN_NAME`
 - `TOTAL_ISSUES`
 - `CRITICAL_ISSUES`, `HIGH_ISSUES`, `MEDIUM_ISSUES`, `LOW_ISSUES`, `INFO_ISSUES`
 - `SCAN_DURATION_SECONDS`
-- `CREATED_AT` (when available)
 
-## Quick Start: Bitbucket Cloud (Linux Hosted)
+## Bitbucket Cloud Example (Linux Hosted)
 
 ```yaml
 image: node:20.9.0
@@ -118,67 +114,44 @@ pipelines:
           - reports/**
 
     - step:
-        name: Evaluate Results
+        name: Enforce Policy
         script:
           - source reports/scan_env.sh
           - echo "Critical=$CRITICAL_ISSUES High=$HIGH_ISSUES Medium=$MEDIUM_ISSUES"
           - |
-            if [ "$CRITICAL_ISSUES" -gt 10 ] || [ "$HIGH_ISSUES" -gt 1 ] || [ "$MEDIUM_ISSUES" -gt 1 ]; then
+            if [ "$CRITICAL_ISSUES" -gt 0 ] || [ "$HIGH_ISSUES" -gt 0 ]; then
               echo "Security thresholds exceeded"
               exit 1
             fi
-          - echo "Security thresholds passed"
 ```
 
-## Quick Start: Self-Hosted Linux (`docker run`)
-
-Use `OUTPUT_DIR` to avoid container-copy plumbing.
+## Self-Hosted Linux Example (`docker run`)
 
 ```yaml
-image: node:20.9.0
-
-pipelines:
-  default:
-    - step:
-        name: Build
-        runs-on:
-          - self.hosted
-          - linux.shell
-        script:
-          - npm ci
-          - npm run build
-        artifacts:
-          - .next/**
-
-    - step:
-        name: ASoC Scan
-        runs-on:
-          - self.hosted
-          - linux.shell
-        script:
-          - mkdir -p "$BITBUCKET_CLONE_DIR/reports"
-          - docker run --rm \
-              -e API_KEY_ID="$API_KEY_ID" \
-              -e API_KEY_SECRET="$API_KEY_SECRET" \
-              -e APP_ID="$APP_ID" \
-              -e TARGET_DIR="$BITBUCKET_CLONE_DIR/.next" \
-              -e OUTPUT_DIR="$BITBUCKET_CLONE_DIR/reports" \
-              -e DATACENTER="NA" \
-              -e WAIT_FOR_ANALYSIS="true" \
-              -v "$BITBUCKET_CLONE_DIR:$BITBUCKET_CLONE_DIR" \
-              cwtravis1/bitbucket_asoc_sast:linux
-          - source "$BITBUCKET_CLONE_DIR/reports/scan_env.sh"
-          - echo "Critical=$CRITICAL_ISSUES High=$HIGH_ISSUES Medium=$MEDIUM_ISSUES"
-          - |
-            if [ "$CRITICAL_ISSUES" -gt 10 ] || [ "$HIGH_ISSUES" -gt 1 ] || [ "$MEDIUM_ISSUES" -gt 1 ]; then
-              echo "Security thresholds exceeded"
-              exit 1
-            fi
-        artifacts:
-          - reports/**
+- step:
+    name: ASoC Scan
+    runs-on:
+      - self.hosted
+      - linux.shell
+    script:
+      - mkdir -p "$BITBUCKET_CLONE_DIR/reports"
+      - docker run --rm \
+          -e API_KEY_ID="$API_KEY_ID" \
+          -e API_KEY_SECRET="$API_KEY_SECRET" \
+          -e APP_ID="$APP_ID" \
+          -e TARGET_DIR="$BITBUCKET_CLONE_DIR/.next" \
+          -e DATACENTER="NA" \
+          -e WAIT_FOR_ANALYSIS="true" \
+          -e OUTPUT_DIR="$BITBUCKET_CLONE_DIR/reports" \
+          -v "$BITBUCKET_CLONE_DIR:$BITBUCKET_CLONE_DIR" \
+          cwtravis1/bitbucket_asoc_sast:linux
+      - source "$BITBUCKET_CLONE_DIR/reports/scan_env.sh"
+      - echo "Total issues: $TOTAL_ISSUES"
+    artifacts:
+      - reports/**
 ```
 
-## Quick Start: Self-Hosted Windows
+## Self-Hosted Windows Example (`docker run`)
 
 ```yaml
 pipelines:
@@ -199,58 +172,33 @@ pipelines:
                   -e WAIT_FOR_ANALYSIS="true" `
                   -v "${localPath}:C:\src" `
                   cwtravis1/bitbucket_asoc_sast:windows
-          - . reports\scan_env.ps1
-          - Write-Host "Critical=$env:CRITICAL_ISSUES High=$env:HIGH_ISSUES Medium=$env:MEDIUM_ISSUES"
-          - |
-            if ([int]$env:CRITICAL_ISSUES -gt 10 -or [int]$env:HIGH_ISSUES -gt 1 -or [int]$env:MEDIUM_ISSUES -gt 1) {
-              Write-Host "Security thresholds exceeded"
-              exit 1
+
+          - $result = @{}
+          - Get-Content "$env:BITBUCKET_CLONE_DIR\reports\scan_results.txt" | ForEach-Object {
+              if ($_ -match '^(?<k>[^=]+)=(?<v>.*)$') {
+                $result[$Matches.k] = $Matches.v
+              }
             }
-        artifacts:
-          - reports/**
+          - Write-Host "Critical=$($result.CRITICAL_ISSUES) High=$($result.HIGH_ISSUES)"
 ```
 
-## Ways to Consume Results
+## Build Images
 
-You can consume variables in 3 patterns:
-- Same `script:` block, immediately after `pipe:` or `docker run`
-- `after-script:` block
-- Separate step (requires `reports/**` artifacts)
-
-If you do not want shell sourcing, parse `reports/scan_output.json` instead.
-
-## Build and Push Your Own Image
-
-Run from repository root.
+Run from repository root:
 
 ```bash
-# Linux image
-docker build -f linux/Dockerfile -t <YOUR_DOCKERHUB>/bitbucket_asoc_sast:linux .
-docker push <YOUR_DOCKERHUB>/bitbucket_asoc_sast:linux
-
-# Windows image
-docker build -f windows/Dockerfile -t <YOUR_DOCKERHUB>/bitbucket_asoc_sast:windows .
-docker push <YOUR_DOCKERHUB>/bitbucket_asoc_sast:windows
+docker build -f linux/Dockerfile -t <YOUR_REGISTRY>/bitbucket_asoc_sast:linux .
+docker build -f windows/Dockerfile -t <YOUR_REGISTRY>/bitbucket_asoc_sast:windows .
 ```
 
-Use custom image:
-
-```yaml
-- pipe: docker://<YOUR_DOCKERHUB>/bitbucket_asoc_sast:linux
-```
-
-## Platform-Specific Guides
+## Platform Guides
 
 - Linux details: `linux/README.md`
 - Windows details: `windows/README.md`
 
-## Contributing and Customization
+## Key Implementation Files
 
-Common customization entry points:
-- `common/ASoC.py`: AppScan API handling
-- `common/RunSASTBase.py`: shared scan orchestration and output export
-- `linux/pipe/RunSAST.py`: Linux-specific behavior
-- `windows/pipe/RunSAST.py`: Windows-specific behavior
-- `linux/pipe/platform_config.py` and `windows/pipe/platform_config.py`: platform constants
-
-If you find issues or want enhancements, open an issue or PR.
+- `common/RunSASTBase.py`: shared pipeline orchestration and output export
+- `common/ASoC.py`: AppScan API client wrapper
+- `linux/pipe/RunSAST.py`: Linux platform overrides
+- `windows/pipe/RunSAST.py`: Windows platform overrides
