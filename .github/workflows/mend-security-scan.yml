@@ -35,22 +35,22 @@ jobs:
       #   run: echo "No relevant changes for Linux image, skipping scan."
 
       - name: Build Linux Docker image
-        if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         run: docker build -f linux/Dockerfile -t bitbucket_asoc_sast_linux:${{ github.run_id }} .
 
       - uses: actions/setup-java@v3
-        if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
 
       - name: Download Mend Agent
-        if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         run: |
           curl -fsSL https://unified-agent.s3.amazonaws.com/wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar -o wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar
 
       - name: Run Mend Scan (Linux)
-        if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         env:
           MEND_API_KEY: ${{ secrets.MEND_KEY }}
         run: |
@@ -80,7 +80,7 @@ jobs:
       #   run: echo "No relevant changes for Windows image, skipping scan."
 
       - name: Switch Docker to Windows containers
-        if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         run: |
           $dockerCliPath = "$env:ProgramFiles\Docker\Docker\DockerCli.exe"
           if (-not (Test-Path $dockerCliPath)) {
@@ -95,22 +95,22 @@ jobs:
           & $dockerCliPath -SwitchDaemon
 
       - name: Build Windows Docker image
-        if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         run: docker build -f windows/Dockerfile -t bitbucket_asoc_sast_windows:${{ github.run_id }} .
 
       - uses: actions/setup-java@v3
-        if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
 
       - name: Download Mend Agent
-        if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         run: |
           Invoke-WebRequest -Uri "https://unified-agent.s3.amazonaws.com/wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar" -OutFile "wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar"
 
       - name: Run Mend Scan (Windows)
-        if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         env:
           MEND_API_KEY: ${{ secrets.MEND_KEY }}
         run: |
