@@ -54,7 +54,7 @@ jobs:
         env:
           MEND_API_KEY: ${{ secrets.MEND_KEY }}
         run: |
-          java -jar wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar -apiKey "${MEND_API_KEY}" -c linux/wss-unified-agent.config -docker.includes "bitbucket_asoc_sast_linux:${{ github.run_id }}"
+          java -jar wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar -apiKey "${MEND_API_KEY}" -c linux/wss-unified-agent.config -docker_includes "bitbucket_asoc_sast_linux:${{ github.run_id }}"
 
   scan-windows:
     runs-on: windows-2022
@@ -82,7 +82,17 @@ jobs:
       - name: Switch Docker to Windows containers
         if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         run: |
-          & "$env:ProgramFiles\Docker\Docker\DockerCli.exe" -SwitchDaemon
+          $dockerCliPath = "$env:ProgramFiles\Docker\Docker\DockerCli.exe"
+          if (-not (Test-Path $dockerCliPath)) {
+            $found = Get-ChildItem -Path "$env:ProgramFiles\Docker" -Filter "DockerCli.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) {
+              $dockerCliPath = $found.FullName
+            } else {
+              Write-Error "DockerCli.exe not found. Cannot switch to Windows containers."
+              exit 1
+            }
+          }
+          & $dockerCliPath -SwitchDaemon
 
       - name: Build Windows Docker image
         if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
@@ -104,4 +114,4 @@ jobs:
         env:
           MEND_API_KEY: ${{ secrets.MEND_KEY }}
         run: |
-          java -jar "wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar" -apiKey "$env:MEND_API_KEY" -c windows/wss-unified-agent.config -docker.includes "bitbucket_asoc_sast_windows:${{ github.run_id }}"
+          java -jar "wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar" -apiKey "$env:MEND_API_KEY" -c windows/wss-unified-agent.config -docker_includes "bitbucket_asoc_sast_windows:${{ github.run_id }}"
