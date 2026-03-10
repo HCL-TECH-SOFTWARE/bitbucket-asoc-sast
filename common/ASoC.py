@@ -119,7 +119,7 @@ class ASoC:
             os.makedirs(dir_path, exist_ok=True)
         
         with io.open(stdoutFile, 'wb') as writer:
-            process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1)
+            process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             for line in iter(process.stdout.readline, b''):
                 writer.write(line)
                 if printio:

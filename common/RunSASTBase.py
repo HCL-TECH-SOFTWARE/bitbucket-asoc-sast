@@ -80,7 +80,8 @@ schema = {
     'PERSONAL_SCAN': {'type': 'boolean', 'required': False, 'default': False},
     'WAIT_FOR_ANALYSIS': {'type': 'boolean', 'required': False, 'default': True},
     'FAIL_FOR_NONCOMPLIANCE': {'type': 'boolean', 'required': False, 'default': False},
-    'FAILURE_THRESHOLD': {'type': 'string', 'required': False, 'default': 'Low'}
+    'FAILURE_THRESHOLD': {'type': 'string', 'required': False, 'default': 'Low'},
+    'OUTPUT_DIR': {'type': 'string', 'required': False, 'default': ''}
 }
 
 
@@ -207,6 +208,7 @@ class AppScanOnCloudSASTBase(Pipe):
         self.wait_for_analysis = self.get_variable('WAIT_FOR_ANALYSIS')
         self.fail_for_noncompliance = self.get_variable('FAIL_FOR_NONCOMPLIANCE')
         self.failure_threshold = self.get_variable('FAILURE_THRESHOLD')
+        self.output_dir = self.get_variable('OUTPUT_DIR')
 
         # Read Variables from the Environment
         self.repo = env.get('BITBUCKET_REPO_SLUG', "")
@@ -339,6 +341,15 @@ class AppScanOnCloudSASTBase(Pipe):
 
         # Create Reports Dir if it does not exist (platform-specific location)
         reportsDir = self._get_reports_dir()
+
+        # If OUTPUT_DIR is set, use it as an additional output location.
+        # This allows self-hosted runners to point to a mounted volume path
+        # so output files are directly accessible on the host without docker cp.
+        if self.output_dir:
+            self.output_dir = os.path.realpath(self.output_dir)
+            logger.info(f"OUTPUT_DIR set: output files will also be written to [{self.output_dir}]")
+            os.makedirs(self.output_dir, exist_ok=True)
+
         logger.info(f"Reports directory: {reportsDir}")
         if(not os.path.isdir(reportsDir)):
             logger.debug(f"Reports dir doesn't exist [{reportsDir}]")
@@ -451,6 +462,9 @@ class AppScanOnCloudSASTBase(Pipe):
         self.exportReportPaths(report_paths, summary_paths, reportsDir)
         logger.info("========== Step 5: Complete =======================\n")
 
+        # Copy all output files to OUTPUT_DIR if specified (self-hosted Docker support)
+        self._copyToOutputDir(reportsDir)
+
         # Step 6: Check for Non-Compliance (if enabled)
         if self.wait_for_analysis and self.fail_for_noncompliance and combined_summary is not None:
             logger.info("========== Step 6: Compliance Check ===============")
@@ -471,6 +485,35 @@ class AppScanOnCloudSASTBase(Pipe):
                 logger.info("========== Step 6: Complete =======================\n")
 
         self.success(message=MSG_PIPELINE_SUCCESS)
+
+    # ------------------------------------------------------------------
+    # Output directory support (self-hosted Docker runners)
+    # ------------------------------------------------------------------
+
+    def _copyToOutputDir(self, reportsDir):
+        """Copy all output files from reportsDir to OUTPUT_DIR when configured.
+
+        For self-hosted runners executing the pipe via ``docker run``,
+        OUTPUT_DIR should point to a path on a mounted volume so that
+        output files (scan_env.sh, scan_output.json, HTML reports, etc.)
+        are directly accessible on the host without ``docker cp``.
+
+        When OUTPUT_DIR is not set (the default, and always the case on
+        Bitbucket Cloud), this method returns immediately without doing
+        anything.
+        """
+        if not self.output_dir:
+            return
+        if os.path.realpath(reportsDir) == self.output_dir:
+            logger.debug("OUTPUT_DIR is the same as reportsDir; skipping copy")
+            return
+        logger.info(f"Copying output files to OUTPUT_DIR: [{self.output_dir}]")
+        for entry in os.scandir(reportsDir):
+            if entry.is_file():
+                dest = os.path.join(self.output_dir, entry.name)
+                shutil.copy2(entry.path, dest)
+                logger.debug(f"Copied [{entry.name}] to [{self.output_dir}]")
+        logger.info("Output files copied to OUTPUT_DIR successfully")
 
     # ------------------------------------------------------------------
     # Scan summary helpers
