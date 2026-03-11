@@ -64,8 +64,9 @@ jobs:
           MEND_API_KEY: ${{ secrets.MEND_KEY }}
         run: |
           PROJECT_NAME=$(grep -m1 '^projectName=' linux/wss-unified-agent.config | cut -d'=' -f2)
-          docker tag bitbucket_asoc_sast_linux:mend-scan "${PROJECT_NAME}:mend-scan"
-          echo "docker.includes=${PROJECT_NAME}:mend-scan" >> linux/wss-unified-agent.config
+          IMAGE_NAME=$(echo "${PROJECT_NAME}" | tr '[:upper:]' '[:lower:]')
+          docker tag bitbucket_asoc_sast_linux:mend-scan "${IMAGE_NAME}:mend-scan"
+          echo "docker.includes=${IMAGE_NAME}:mend-scan" >> linux/wss-unified-agent.config
           java -jar wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar -apiKey "${MEND_API_KEY}" -c linux/wss-unified-agent.config
 
   # scan-windows:
