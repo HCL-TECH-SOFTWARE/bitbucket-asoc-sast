@@ -67,7 +67,10 @@ jobs:
           docker images --format '{{.Repository}}:{{.Tag}}'
           echo "--- docker.includes from config ---"
           grep 'docker.includes' linux/wss-unified-agent.config
-          java -jar wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar -apiKey "${MEND_API_KEY}" -c linux/wss-unified-agent.config
+          java -jar wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar \
+            -apiKey "${MEND_API_KEY}" \
+            -c linux/wss-unified-agent.config \
+            -projectName "2.0.0-Linux"
 
   # scan-windows:
   #   runs-on: windows-2022
