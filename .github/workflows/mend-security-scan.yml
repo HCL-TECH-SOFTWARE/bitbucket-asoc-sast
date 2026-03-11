@@ -36,14 +36,14 @@ jobs:
 
       - name: Build Linux Docker image
         # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-        run: docker build --load -f linux/Dockerfile -t bitbucket_asoc_sast_linux:${{ github.run_id }} .
+        run: docker build --load -f linux/Dockerfile -t bitbucket_asoc_sast_linux:mend-scan .
 
       - name: Verify Linux Docker image is available
         # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
         run: |
-          docker images bitbucket_asoc_sast_linux:${{ github.run_id }}
-          if ! docker inspect bitbucket_asoc_sast_linux:${{ github.run_id }} > /dev/null 2>&1; then
-            echo "ERROR: Docker image bitbucket_asoc_sast_linux:${{ github.run_id }} not found in local store."
+          docker images bitbucket_asoc_sast_linux:mend-scan
+          if ! docker inspect bitbucket_asoc_sast_linux:mend-scan > /dev/null 2>&1; then
+            echo "ERROR: Docker image bitbucket_asoc_sast_linux:mend-scan not found in local store."
             exit 1
           fi
 
@@ -63,8 +63,9 @@ jobs:
         env:
           MEND_API_KEY: ${{ secrets.MEND_KEY }}
         run: |
-          echo "docker.includes=bitbucket_asoc_sast_linux:*" >> linux/wss-unified-agent.config
-          java -jar wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar -apiKey "${MEND_API_KEY}" -c linux/wss-unified-agent.config
+          PROJECT_NAME=$(grep -m1 '^projectName=' linux/wss-unified-agent.config | cut -d'=' -f2)
+          echo "docker.includes=bitbucket_asoc_sast_linux:mend-scan" >> linux/wss-unified-agent.config
+          java -jar wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar -apiKey "${MEND_API_KEY}" -c linux/wss-unified-agent.config -projectName "${PROJECT_NAME}"
 
   # scan-windows:
   #   runs-on: windows-2022
