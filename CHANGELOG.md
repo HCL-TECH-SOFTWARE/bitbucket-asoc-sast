@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.0.0 - 2026-03-31
+
+- Added Windows pipe support
+- Added options such as personal scan, scan speed and more
+- Added support for AppScan 360 url
+
 ## Version 1.1.2 - 2024-11-12
 
 - Updated linux pipe to work with ASoC v4 APIs.

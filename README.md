@@ -1,16 +1,10 @@
 # Bitbucket Pipe for HCL AppScan on Cloud SAST
 
-This repository provides Docker-based Bitbucket pipeline integrations for HCL AppScan on Cloud SAST scanning.
+This repository provides Docker-based Bitbucket pipeline integrations for AppScan on Cloud, AppScan 360°.
 
 It supports:
 - Linux-based usage in Bitbucket Cloud and self-hosted Linux runners
 - Windows-based usage in self-hosted Windows runners
-
-The scan flow is:
-1. Build your application
-2. Run the ASoC scan pipe
-3. Read scan output variables from generated files
-4. Apply your own security policy logic in pipeline code
 
 ## What This Repo Contains
 
