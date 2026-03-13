@@ -1,9 +1,10 @@
-FROM python:3.11-slim@sha256:c8271b1f627d0068857dce5b53e14a9558603b527e46f1f901722f935b786a39
+FROM python:3.13-slim
 
 # Build context must be the repository root:
 #   docker build -f linux/Dockerfile .
 COPY linux/requirements.txt /
-RUN pip install --no-cache-dir -r /requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r /requirements.txt
 
 # Set proper working directory with correct permissions
 RUN mkdir -p /app && chown -R nobody:nogroup /app
