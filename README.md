@@ -1,8 +1,6 @@
 # Bitbucket Pipe for HCL AppScan on Cloud SAST
 
-This repository provides Docker-based Bitbucket pipeline integrations for HCL AppScan on Cloud and AppScan 360 SAST/SCA scanning.
-
-Current release in code: `2.0.0`
+This repository provides Docker-based Bitbucket pipeline integrations for HCL AppScan on Cloud and AppScan 360° SAST/SCA scanning.
 
 Supported runner models:
 - Linux image on Bitbucket Cloud hosted Linux runners (`pipe:` syntax)
@@ -83,6 +81,26 @@ Common exported values include:
 - `TOTAL_ISSUES`
 - `CRITICAL_ISSUES`, `HIGH_ISSUES`, `MEDIUM_ISSUES`, `LOW_ISSUES`, `INFO_ISSUES`
 - `SCAN_DURATION_SECONDS`
+
+## Viewing Reports in Bitbucket Pipelines
+
+When `WAIT_FOR_ANALYSIS=true`, the pipe generates HTML reports, JSON results, and a summary file under `reports/`. To make these accessible in the Bitbucket UI:
+
+1. Declare `artifacts` in the pipeline step that runs the scan (see examples below).
+2. After the pipeline runs, open the step in the Bitbucket Pipelines UI and click the **Artifacts** tab.
+3. All files matching `reports/**` will be listed and available for download directly from the browser — no need to access the runner or AppScan portal.
+
+Typical files you will find in the Artifacts tab:
+
+| Artifact | Contents |
+|---|---|
+| `reports/{scanName}_sast.html` | SAST findings as a browsable HTML report |
+| `reports/{scanName}_sca.html` | SCA/open-source findings as a browsable HTML report |
+| `reports/scan_results.txt` | Key=Value summary (issue counts, scan IDs, URLs) |
+| `reports/scan_env.sh` | Shell-sourceable exports for use in downstream steps |
+| `reports/report_paths.txt` | Full paths to every generated file |
+
+> **Note:** Artifacts are only produced when `WAIT_FOR_ANALYSIS=true`. If set to `false`, the step exits after submission and no report files are written.
 
 ## Bitbucket Cloud Example (Linux Hosted)
 
@@ -170,6 +188,7 @@ pipelines:
                   -e APP_ID=$env:APP_ID `
                   -e TARGET_DIR="C:\src\bin" `
                   -e WAIT_FOR_ANALYSIS="true" `
+                  -e OUTPUT_DIR="C:\src\reports" `
                   -v "${localPath}:C:\src" `
                   cwtravis1/bitbucket_asoc_sast:windows
 
@@ -180,16 +199,35 @@ pipelines:
               }
             }
           - Write-Host "Critical=$($result.CRITICAL_ISSUES) High=$($result.HIGH_ISSUES)"
+        artifacts:
+          - reports/**
 ```
 
-## Build Images
+> **Windows note:** Because the scan runs inside a Windows container, the `OUTPUT_DIR` variable is used to copy reports from inside the container to the host-mounted volume path (`C:\src\reports` → `$BITBUCKET_CLONE_DIR\reports`). The `artifacts` declaration then picks them up for the Artifacts tab.
 
-Run from repository root:
+## Build and Push Images
 
+Run from repository root. Replace `<YOUR_REGISTRY>` with your Docker Hub username or registry hostname (e.g. `cwtravis1`).
+
+**Linux image** (build on a Linux host or with Linux containers mode):
 ```bash
 docker build -f linux/Dockerfile -t <YOUR_REGISTRY>/bitbucket_asoc_sast:linux .
-docker build -f windows/Dockerfile -t <YOUR_REGISTRY>/bitbucket_asoc_sast:windows .
+
+docker push <YOUR_REGISTRY>/bitbucket_asoc_sast:linux
 ```
+
+**Windows image** (build on a Windows host with Windows containers mode):
+```powershell
+docker build -f windows/Dockerfile -t <YOUR_REGISTRY>/bitbucket_asoc_sast:windows .
+
+docker push <YOUR_REGISTRY>/bitbucket_asoc_sast:windows
+```
+
+If not already logged in to Docker Hub, authenticate first:
+```bash
+docker login
+```
+For other registries (e.g. Azure Container Registry, AWS ECR), use the relevant `docker login` command for that registry before pushing.
 
 ## Platform Guides
 
