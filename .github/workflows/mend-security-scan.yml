@@ -1,157 +1,157 @@
-name: Mend Security Scan
+# name: Mend Security Scan
 
-on:
-  pull_request:
-    branches: [ASPL-1464]
-    types: [opened, synchronize]
+# on:
+#   pull_request:
+#     branches: [ASPL-1464]
+#     types: [opened, synchronize]
 
-env:
-  MEND_AGENT_VERSION: "20.10.2"
-  JAVA_VERSION: "11"
-  JAVA_DISTRIBUTION: "temurin"
+# env:
+#   MEND_AGENT_VERSION: "20.10.2"
+#   JAVA_VERSION: "11"
+#   JAVA_DISTRIBUTION: "temurin"
 
-jobs:
-  scan-linux:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+# jobs:
+#   scan-linux:
+#     runs-on: ubuntu-latest
+#     timeout-minutes: 30
 
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+#     steps:
+#       - uses: actions/checkout@v3
+#         with:
+#           fetch-depth: 0
 
-      # - name: Check for dependency file changes
-      #   uses: dorny/paths-filter@v3
-      #   id: filter
-      #   with:
-      #     filters: |
-      #       dependencies:
-      #         - 'linux/requirements.txt'
-      #         - 'linux/Dockerfile'
-      #         - 'common/**'
+#       # - name: Check for dependency file changes
+#       #   uses: dorny/paths-filter@v3
+#       #   id: filter
+#       #   with:
+#       #     filters: |
+#       #       dependencies:
+#       #         - 'linux/requirements.txt'
+#       #         - 'linux/Dockerfile'
+#       #         - 'common/**'
 
-      # - name: Skip if no dependency changes
-      #   if: github.event.action != 'opened' && steps.filter.outputs.dependencies != 'true'
-      #   run: echo "No relevant changes for Linux image, skipping scan."
+#       # - name: Skip if no dependency changes
+#       #   if: github.event.action != 'opened' && steps.filter.outputs.dependencies != 'true'
+#       #   run: echo "No relevant changes for Linux image, skipping scan."
 
-      - name: Build Linux Docker image
-        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-        run: docker build --load -f linux/Dockerfile -t bitbucket_asoc_sast_linux:mend-scan .
+#       - name: Build Linux Docker image
+#         # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+#         run: docker build --load -f linux/Dockerfile -t bitbucket_asoc_sast_linux:mend-scan .
 
-      - name: Verify Linux Docker image is available
-        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-        run: |
-          docker images bitbucket_asoc_sast_linux:mend-scan
-          if ! docker inspect bitbucket_asoc_sast_linux:mend-scan > /dev/null 2>&1; then
-            echo "ERROR: Docker image bitbucket_asoc_sast_linux:mend-scan not found in local store."
-            exit 1
-          fi
+#       - name: Verify Linux Docker image is available
+#         # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+#         run: |
+#           docker images bitbucket_asoc_sast_linux:mend-scan
+#           if ! docker inspect bitbucket_asoc_sast_linux:mend-scan > /dev/null 2>&1; then
+#             echo "ERROR: Docker image bitbucket_asoc_sast_linux:mend-scan not found in local store."
+#             exit 1
+#           fi
 
-      - uses: actions/setup-java@v3
-        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
+#       - uses: actions/setup-java@v3
+#         # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+#         with:
+#           java-version: ${{ env.JAVA_VERSION }}
+#           distribution: ${{ env.JAVA_DISTRIBUTION }}
 
-      - name: Download Mend Agent
-        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-        run: |
-          curl -fsSL https://unified-agent.s3.amazonaws.com/wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar -o wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar
+#       - name: Download Mend Agent
+#         # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+#         run: |
+#           curl -fsSL https://unified-agent.s3.amazonaws.com/wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar -o wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar
 
-      - name: Run Mend Scan (Linux)
-        # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-        env:
-          MEND_API_KEY: ${{ secrets.MEND_KEY }}
-        run: |
-          echo "--- Local Docker images ---"
-          docker images --format '{{.Repository}}:{{.Tag}}'
-          echo "--- docker.includes from config ---"
-          grep 'docker.includes' linux/wss-unified-agent.config
-          java -jar wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar \
-            -apiKey "${MEND_API_KEY}" \
-            -c linux/wss-unified-agent.config \
-            -project "2.0.0-Linux"
+#       - name: Run Mend Scan (Linux)
+#         # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+#         env:
+#           MEND_API_KEY: ${{ secrets.MEND_KEY }}
+#         run: |
+#           echo "--- Local Docker images ---"
+#           docker images --format '{{.Repository}}:{{.Tag}}'
+#           echo "--- docker.includes from config ---"
+#           grep 'docker.includes' linux/wss-unified-agent.config
+#           java -jar wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar \
+#             -apiKey "${MEND_API_KEY}" \
+#             -c linux/wss-unified-agent.config \
+#             -project "2.0.0-Linux"
 
-  # scan-windows:
-  #   runs-on: windows-2022
-  #   timeout-minutes: 45
+#   # scan-windows:
+#   #   runs-on: windows-2022
+#   #   timeout-minutes: 45
 
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 0
+#   #   steps:
+#   #     - uses: actions/checkout@v3
+#   #       with:
+#   #         fetch-depth: 0
 
-  #     # - name: Check for dependency file changes
-  #     #   uses: dorny/paths-filter@v3
-  #     #   id: filter
-  #     #   with:
-  #     #     filters: |
-  #     #       dependencies:
-  #     #         - 'windows/requirements.txt'
-  #     #         - 'windows/Dockerfile'
-  #     #         - 'common/**'
+#   #     # - name: Check for dependency file changes
+#   #     #   uses: dorny/paths-filter@v3
+#   #     #   id: filter
+#   #     #   with:
+#   #     #     filters: |
+#   #     #       dependencies:
+#   #     #         - 'windows/requirements.txt'
+#   #     #         - 'windows/Dockerfile'
+#   #     #         - 'common/**'
 
-  #     # - name: Skip if no dependency changes
-  #     #   if: github.event.action != 'opened' && steps.filter.outputs.dependencies != 'true'
-  #     #   run: echo "No relevant changes for Windows image, skipping scan."
+#   #     # - name: Skip if no dependency changes
+#   #     #   if: github.event.action != 'opened' && steps.filter.outputs.dependencies != 'true'
+#   #     #   run: echo "No relevant changes for Windows image, skipping scan."
 
-  #     - name: Start Docker service
-  #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-  #       run: |
-  #         Start-Service docker
-  #         $timeout = 60
-  #         $elapsed = 0
-  #         do {
-  #           Start-Sleep -Seconds 5
-  #           $elapsed += 5
-  #           $status = (Get-Service docker).Status
-  #           Write-Host "Docker service status: $status ($elapsed s elapsed)"
-  #         } while ($status -ne 'Running' -and $elapsed -lt $timeout)
-  #         if ($status -ne 'Running') {
-  #           Write-Error "Docker service did not start within $timeout seconds."
-  #           exit 1
-  #         }
+#   #     - name: Start Docker service
+#   #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+#   #       run: |
+#   #         Start-Service docker
+#   #         $timeout = 60
+#   #         $elapsed = 0
+#   #         do {
+#   #           Start-Sleep -Seconds 5
+#   #           $elapsed += 5
+#   #           $status = (Get-Service docker).Status
+#   #           Write-Host "Docker service status: $status ($elapsed s elapsed)"
+#   #         } while ($status -ne 'Running' -and $elapsed -lt $timeout)
+#   #         if ($status -ne 'Running') {
+#   #           Write-Error "Docker service did not start within $timeout seconds."
+#   #           exit 1
+#   #         }
 
-  #     - name: Verify Docker is in Windows containers mode
-  #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-  #       run: |
-  #         $osType = docker info --format "{{.OSType}}"
-  #         Write-Host "Docker OS type: $osType"
-  #         if ($osType -ne "windows") {
-  #           Write-Error "Docker is not in Windows containers mode (OSType: $osType). windows-2022 runners should default to Windows containers."
-  #           exit 1
-  #         }
-  #         Write-Host "Docker is already configured for Windows containers."
+#   #     - name: Verify Docker is in Windows containers mode
+#   #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+#   #       run: |
+#   #         $osType = docker info --format "{{.OSType}}"
+#   #         Write-Host "Docker OS type: $osType"
+#   #         if ($osType -ne "windows") {
+#   #           Write-Error "Docker is not in Windows containers mode (OSType: $osType). windows-2022 runners should default to Windows containers."
+#   #           exit 1
+#   #         }
+#   #         Write-Host "Docker is already configured for Windows containers."
 
-  #     - name: Build Windows Docker image
-  #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-  #       run: docker build -f windows/Dockerfile -t bitbucket_asoc_sast_windows:${{ github.run_id }} .
+#   #     - name: Build Windows Docker image
+#   #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+#   #       run: docker build -f windows/Dockerfile -t bitbucket_asoc_sast_windows:${{ github.run_id }} .
 
-  #     - name: Verify Windows Docker image is available
-  #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-  #       run: |
-  #         docker images bitbucket_asoc_sast_windows:${{ github.run_id }}
-  #         $exists = docker inspect bitbucket_asoc_sast_windows:${{ github.run_id }} 2>&1
-  #         if ($LASTEXITCODE -ne 0) {
-  #           Write-Error "Docker image bitbucket_asoc_sast_windows:${{ github.run_id }} not found in local store."
-  #           exit 1
-  #         }
+#   #     - name: Verify Windows Docker image is available
+#   #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+#   #       run: |
+#   #         docker images bitbucket_asoc_sast_windows:${{ github.run_id }}
+#   #         $exists = docker inspect bitbucket_asoc_sast_windows:${{ github.run_id }} 2>&1
+#   #         if ($LASTEXITCODE -ne 0) {
+#   #           Write-Error "Docker image bitbucket_asoc_sast_windows:${{ github.run_id }} not found in local store."
+#   #           exit 1
+#   #         }
 
-  #     - uses: actions/setup-java@v3
-  #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-  #       with:
-  #         java-version: ${{ env.JAVA_VERSION }}
-  #         distribution: ${{ env.JAVA_DISTRIBUTION }}
+#   #     - uses: actions/setup-java@v3
+#   #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+#   #       with:
+#   #         java-version: ${{ env.JAVA_VERSION }}
+#   #         distribution: ${{ env.JAVA_DISTRIBUTION }}
 
-  #     - name: Download Mend Agent
-  #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-  #       run: |
-  #         Invoke-WebRequest -Uri "https://unified-agent.s3.amazonaws.com/wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar" -OutFile "wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar"
+#   #     - name: Download Mend Agent
+#   #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+#   #       run: |
+#   #         Invoke-WebRequest -Uri "https://unified-agent.s3.amazonaws.com/wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar" -OutFile "wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar"
 
-  #     - name: Run Mend Scan (Windows)
-  #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
-  #       env:
-  #         MEND_API_KEY: ${{ secrets.MEND_KEY }}
-  #       run: |
-  #         Add-Content -Path windows/wss-unified-agent.config -Value "docker.includes=bitbucket_asoc_sast_windows:*"
-  #         java -jar "wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar" -apiKey "$env:MEND_API_KEY" -c windows/wss-unified-agent.config
+#   #     - name: Run Mend Scan (Windows)
+#   #       # if: github.event.action == 'opened' || steps.filter.outputs.dependencies == 'true'
+#   #       env:
+#   #         MEND_API_KEY: ${{ secrets.MEND_KEY }}
+#   #       run: |
+#   #         Add-Content -Path windows/wss-unified-agent.config -Value "docker.includes=bitbucket_asoc_sast_windows:*"
+#   #         java -jar "wss-unified-agent-${{ env.MEND_AGENT_VERSION }}.jar" -apiKey "$env:MEND_API_KEY" -c windows/wss-unified-agent.config
