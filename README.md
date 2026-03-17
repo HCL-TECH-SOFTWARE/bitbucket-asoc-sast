@@ -188,7 +188,9 @@ Run from repository root:
 
 ```bash
 docker build -f linux/Dockerfile -t <YOUR_REGISTRY>/bitbucket_asoc_sast:linux .
+docker push <YOUR_REGISTRY>/bitbucket_asoc_sast:linux
 docker build -f windows/Dockerfile -t <YOUR_REGISTRY>/bitbucket_asoc_sast:windows .
+docker push <YOUR_REGISTRY>/bitbucket_asoc_sast:windows
 ```
 
 ## Platform Guides
