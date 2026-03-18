@@ -1,22 +1,15 @@
-# Linux Pipe Guide
+# Linux AppScan Pipe
 
-This image runs the AppScan Bitbucket pipe in Linux environments.
+[![Docker](https://img.shields.io/badge/docker-linux-blue.svg)]()
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 
-Use this guide for:
-- Bitbucket Cloud hosted Linux runners (`pipe:` syntax)
-- Self-hosted Linux runners (`docker run`)
+> Linux image for HCL AppScan scans in Bitbucket Cloud hosted and self-hosted runners.
 
-For repository-wide documentation, see the root `README.md`.
+For complete documentation, variables, and troubleshooting, see [README.md](../README.md).
 
-## Runtime Behavior
+---
 
-- The container downloads SAClientUtil for Linux (`appscan.sh`)
-- It packages `TARGET_DIR` into IRX and submits scan(s)
-- It runs SAST, SCA, or both depending on flags
-- If `WAIT_FOR_ANALYSIS=true` (default), it waits for completion and generates reports
-- If `WAIT_FOR_ANALYSIS=false`, it exits after submission with no summary/report export files
-
-## Example: Bitbucket Cloud Hosted Linux
+## Bitbucket Cloud (pipe: syntax)
 
 ```yaml
 - step:
@@ -28,22 +21,21 @@ For repository-wide documentation, see the root `README.md`.
           API_KEY_SECRET: $API_KEY_SECRET
           APP_ID: $APP_ID
           TARGET_DIR: $BITBUCKET_CLONE_DIR/build
-          DATACENTER: "NA"
           WAIT_FOR_ANALYSIS: "true"
     artifacts:
       - reports/**
 ```
 
-Consume results in same step or next step:
+Access results:
 
 ```bash
 source reports/scan_env.sh
-echo "Critical=$CRITICAL_ISSUES High=$HIGH_ISSUES Medium=$MEDIUM_ISSUES"
+echo "Critical: $CRITICAL_ISSUES, High: $HIGH_ISSUES"
 ```
 
-## Example: Self-Hosted Linux with `docker run`
+---
 
-Set `OUTPUT_DIR` to a mounted host path so outputs are directly available on the runner host.
+## Self-Hosted Linux (docker run)
 
 ```yaml
 - step:
@@ -58,7 +50,6 @@ Set `OUTPUT_DIR` to a mounted host path so outputs are directly available on the
           -e API_KEY_SECRET="$API_KEY_SECRET" \
           -e APP_ID="$APP_ID" \
           -e TARGET_DIR="$BITBUCKET_CLONE_DIR/build" \
-          -e DATACENTER="NA" \
           -e WAIT_FOR_ANALYSIS="true" \
           -e OUTPUT_DIR="$BITBUCKET_CLONE_DIR/reports" \
           -v "$BITBUCKET_CLONE_DIR:$BITBUCKET_CLONE_DIR" \
@@ -69,48 +60,57 @@ Set `OUTPUT_DIR` to a mounted host path so outputs are directly available on the
       - reports/**
 ```
 
-## Variables
+**Setup notes:**
+- `OUTPUT_DIR` copies reports from container to host path
+- Volume mounts (`-v`) allow container to access source code
+- Results are available on the host after container exits
 
-Required:
-- `API_KEY_ID`
-- `API_KEY_SECRET`
-- `APP_ID`
-- `TARGET_DIR`
+---
 
-Frequently used optional:
-- `DATACENTER` (`NA`, `EU`, or custom URL)
-- `WAIT_FOR_ANALYSIS`
-- `STATIC_ANALYSIS_ONLY`
-- `OPEN_SOURCE_ONLY`
-- `SCAN_SPEED`
-- `PERSONAL_SCAN`
-- `FAIL_FOR_NONCOMPLIANCE`
-- `FAILURE_THRESHOLD`
-- `CONFIG_FILE_PATH`
-- `SECRET_SCANNING`
-- `OUTPUT_DIR`
-- `ALLOW_UNTRUSTED`
-- `DEBUG`
+## Linux-Specific Usage
 
-## Output Files
-
-When waiting for analysis, outputs are written to `reports/`:
-- `scan_results.txt`
-- `scan_env.sh`
-- `report_paths.txt`
-- `{scanName}_sast.html` and `{scanName}_sast.json` (if SAST ran)
-- `{scanName}_sca.html` and `{scanName}_sca.json` (if SCA ran)
-- `{scanName}_stdout.txt`
-- `{scanName}_logs.zip` (if generated)
-
-There is no `scan_output.json` output in the current implementation.
-
-## Enforcing Policy in Pipeline Code
+### Using scan_env.sh for Policy Enforcement
 
 ```bash
 source reports/scan_env.sh
-if [ "$CRITICAL_ISSUES" -gt 0 ] || [ "$HIGH_ISSUES" -gt 0 ]; then
-  echo "Security thresholds exceeded"
+if [ "$CRITICAL_ISSUES" -gt 0 ]; then
+  echo "Critical issues found - failing build"
   exit 1
 fi
 ```
+
+### Available Environment Variables
+
+After sourcing `scan_env.sh`:
+
+```bash
+$SAST_SCAN_ID          # Scan identifier
+$TOTAL_ISSUES          # Total issues found
+$CRITICAL_ISSUES       # Critical severity count
+$HIGH_ISSUES           # High severity count
+$MEDIUM_ISSUES         # Medium severity count
+$LOW_ISSUES            # Low severity count
+$INFO_ISSUES           # Informational severity count
+```
+
+---
+
+## Linux Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| **Docker not found** | Verify `docker version` works on self-hosted runner |
+| **Volume mount fails** | Check path exists: `ls -la $BITBUCKET_CLONE_DIR` |
+| **Reports missing** | Ensure `WAIT_FOR_ANALYSIS=true` and check container logs |
+| **Permission denied** | Verify Docker daemon can access mounted host paths |
+| **API connection error** | Enable `DEBUG=true` and verify `DATACENTER` setting |
+
+---
+
+## Quick Links
+
+- **Full Documentation:** [README.md](../README.md)
+- **Configuration Variables:** [README.md#configuration-variables](../README.md#configuration-variables)
+- **Windows Guide:** [windows/README.md](../windows/README.md)
+
+
