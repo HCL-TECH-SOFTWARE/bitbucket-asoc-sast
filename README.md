@@ -73,6 +73,8 @@ pipelines:
 ### Building The Image
 
 Feel free to use my docker images just as shown in the example pipeline above. You can also use the following commands to build your own images and push to your dockerhub. Replace `<YOUR_DOCKERHUB>` with your dockerhub username.
+To do this, you have to have docker hub access and need to create your repository for container image using the command below.
+Goto hub.docker.com and sign up for the service first.  
 
 Build and Push the Linux Image:
 ```shell
@@ -80,6 +82,7 @@ git clone https://github.com/cwtravis/bitbucket-asoc-sast.git
 cd bitbucket-asoc-sast/linux
 docker build -t asoc_sast_linux .
 docker tag asoc_sast_linux <YOUR_DOCKERHUB>/bitbucket_asoc_sast:linux
+docker login
 docker push <YOUR_DOCKERHUB>/bitbucket_asoc_sast:linux
 ```
 
