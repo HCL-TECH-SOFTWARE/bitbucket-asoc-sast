@@ -32,6 +32,7 @@ from constants import (
     API_ISSUES,
     API_REPORT_SECURITY_SCAN, API_REPORTS_FILTER, API_REPORT_DOWNLOAD,
     CONTENT_TYPE_JSON, CONTENT_TYPE_OCTET_STREAM,
+    HTTP_OK, HTTP_CREATED,
     SCAN_STATUS_READY, SCAN_STATUS_ABORT,
     REPORT_WAIT_INTERVAL_SECS, REPORT_WAIT_TIMEOUT_SECS,
     MSG_ERROR_SUBMITTING_SCAN, MSG_ASOC_REPORT_STATUS, MSG_ASOC_APP_SUMMARY_ERROR,
@@ -62,7 +63,7 @@ class ASoC:
             resp = requests.post(f"{self.base_url}{API_LOGIN}", json=self.apikey, verify=False)
         else:
             resp = requests.post(f"{self.base_url}{API_LOGIN}", json=self.apikey)
-        if(resp.status_code == 200):
+        if(resp.status_code == HTTP_OK):
             jsonObj = resp.json()
             self.token = jsonObj["Token"]
             return True
@@ -78,7 +79,7 @@ class ASoC:
             resp = requests.get(f"{self.base_url}{API_LOGOUT}", headers=headers, verify=False)
         else:
             resp = requests.get(f"{self.base_url}{API_LOGOUT}", headers=headers)
-        if(resp.status_code == 200):
+        if(resp.status_code == HTTP_OK):
             self.token = ""
             return True
         else:
@@ -93,7 +94,7 @@ class ASoC:
             resp = requests.get(f"{self.base_url}{API_TENANT_INFO}", headers=headers, verify=False)
         else:
             resp = requests.get(f"{self.base_url}{API_TENANT_INFO}", headers=headers)
-        return resp.status_code == 200
+        return resp.status_code == HTTP_OK
     
     def generateIRX(self, scanName, scan_flag, appscanBin, stdoutFilePath = "", configFile=None, secret_scanning=None, printio=True, scan_speed=""):
         #Build scan arguments
@@ -149,7 +150,7 @@ class ASoC:
             resp = requests.post(f"{self.base_url}{API_FILE_UPLOAD}", headers=headers, files=files, verify=False)
         else:
             resp = requests.post(f"{self.base_url}{API_FILE_UPLOAD}", headers=headers, files=files)
-        if(resp.status_code == 200):
+        if(resp.status_code == HTTP_OK):
             fileId = resp.json()["FileId"]
             return fileId
         return None
@@ -172,7 +173,7 @@ class ASoC:
             resp = requests.post(f"{self.base_url}{API_SAST_SCAN}", headers=headers, json=data, verify=False)
         else:
             resp = requests.post(f"{self.base_url}{API_SAST_SCAN}", headers=headers, json=data)
-        if(resp.status_code == 201):
+        if(resp.status_code == HTTP_CREATED):
             scanId = resp.json()["Id"]
             return scanId
         else:
@@ -198,7 +199,7 @@ class ASoC:
             resp = requests.post(f"{self.base_url}{API_SCA_SCAN}", headers=headers, json=data, verify=False)
         else:
             resp = requests.post(f"{self.base_url}{API_SCA_SCAN}", headers=headers, json=data)
-        if(resp.status_code == 201):
+        if(resp.status_code == HTTP_CREATED):
             scanId = resp.json()["Id"]
             return scanId
         else:
@@ -224,7 +225,7 @@ class ASoC:
             resp = requests.get(url, headers=headers, verify=False)
         else:
             resp = requests.get(url, headers=headers)
-        if(resp.status_code == 200):
+        if(resp.status_code == HTTP_OK):
             executions = resp.json()
             if executions and len(executions) > 0:
                 return executions[0]
@@ -243,7 +244,7 @@ class ASoC:
             resp = requests.get(f"{self.base_url}{API_APPS}", headers=headers, verify=False)
         else:
             resp = requests.get(f"{self.base_url}{API_APPS}", headers=headers)
-        if(resp.status_code == 200):
+        if(resp.status_code == HTTP_OK):
             app_info = self.checkAppExists(resp.json(), id)
             return app_info
         else:
@@ -272,7 +273,7 @@ class ASoC:
         else:
             resp = requests.get(asoc_url+id, headers=headers)
         
-        if(resp.status_code == 200):
+        if(resp.status_code == HTTP_OK):
             return resp.json()
         else:
             self.logger.error(resp.status_code)
@@ -295,7 +296,7 @@ class ASoC:
         else:
             resp = requests.get(asoc_url+id, headers=headers)
         
-        if(resp.status_code == 200):
+        if(resp.status_code == HTTP_OK):
             return resp.json()
         else:
             self.logger.error(resp.status_code)
@@ -336,7 +337,7 @@ class ASoC:
                 resp = requests.get(url, headers=headers, verify=False)
             else:
                 resp = requests.get(url, headers=headers)
-            if resp.status_code == 200:
+            if resp.status_code == HTTP_OK:
                 response_json = resp.json()
                 items = response_json.get("Items", [])
                 result = {}
@@ -362,7 +363,7 @@ class ASoC:
             resp = requests.post(url, headers=headers, json=reportConfig, verify=False)
         else:
             resp = requests.post(url, headers=headers, json=reportConfig)
-        if(resp.status_code == 200):
+        if(resp.status_code == HTTP_OK):
             return resp.json()["Id"]
         else:
             return None
@@ -376,7 +377,7 @@ class ASoC:
             resp = requests.get(f"{self.base_url}{API_REPORTS_FILTER}"+reportId, headers=headers, verify=False)
         else:
             resp = requests.get(f"{self.base_url}{API_REPORTS_FILTER}"+reportId, headers=headers)
-        if(resp.status_code == 200):
+        if(resp.status_code == HTTP_OK):
             return resp.json()
         else:
             self.logger.error(f"Error fetching report status for reportId {reportId}: {resp.status_code} - {resp.text}")
@@ -385,10 +386,11 @@ class ASoC:
     def waitForReport(self, reportId, intervalSecs=REPORT_WAIT_INTERVAL_SECS, timeoutSecs=REPORT_WAIT_TIMEOUT_SECS):
         status = None
         elapsed = 0
-        while status not in [SCAN_STATUS_ABORT, SCAN_STATUS_READY] or elapsed >= timeoutSecs:
-            status = self.reportStatus(reportId)
+        while status not in [SCAN_STATUS_ABORT, SCAN_STATUS_READY] and elapsed < timeoutSecs:
+            report = self.reportStatus(reportId)
+            status = report.get("Status") if isinstance(report, dict) else None
             elapsed += intervalSecs
-            time.sleep(intervalSecs)   
+            time.sleep(intervalSecs)
         return status == SCAN_STATUS_READY
         
     def downloadReport(self, reportId, fullPath):
@@ -400,7 +402,7 @@ class ASoC:
             resp = requests.get(f"{self.base_url}{API_REPORT_DOWNLOAD.format(report_id=reportId)}", headers=headers, verify=False)
         else:
             resp = requests.get(f"{self.base_url}{API_REPORT_DOWNLOAD.format(report_id=reportId)}", headers=headers)
-        if(resp.status_code==200):
+        if(resp.status_code == HTTP_OK):
             report_bytes = resp.content
             with open(fullPath, "wb") as f:
                 f.write(report_bytes)

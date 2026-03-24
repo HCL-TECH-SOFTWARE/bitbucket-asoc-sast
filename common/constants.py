@@ -53,6 +53,12 @@ API_REPORTS_FILTER = "/api/v4/Reports?filter=Id%20eq%20"
 API_REPORT_DOWNLOAD = "/api/v4/Reports/{report_id}/Download"
 
 # =============================================================================
+# HTTP Status Codes
+# =============================================================================
+HTTP_OK = 200
+HTTP_CREATED = 201
+
+# =============================================================================
 # HTTP Headers & Content Types
 # =============================================================================
 CONTENT_TYPE_JSON = "application/json"

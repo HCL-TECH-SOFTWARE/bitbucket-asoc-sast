@@ -1,7 +1,7 @@
 name: Bitbucket ASoC/A360° SAST
 version: 2.0.0
 image: cwtravis1/bitbucket_asoc_sast:windows@sha256:f2293b7741d451b8a3d2f4a9483dd8e9d053dfc62d0bc88c053e9e705e037d52
-description: This pipe runs SAST and SCA scans on HCL AppScan on Cloud and AppScan 360
+description: This pipe runs SAST and SCA scans on HCL AppScan on Cloud and AppScan 360°
 repository: https://github.com/HCL-TECH-SOFTWARE/bitbucket-asoc-sast
 maintainer: cwtravis@gmail.com
 tags:

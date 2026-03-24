@@ -53,6 +53,7 @@ from constants import (
     MSG_PIPE_NAME, MSG_PIPELINE_ERROR, MSG_PIPELINE_SUCCESS,
     MSG_BOTH_OSO_SAO, MSG_SCAN_COMMENT,
     TIMESTAMP_FORMAT,
+    HTTP_OK,
 )
 from platform_config import SACLIENT_DOWNLOAD_ENDPOINT, APPSCAN_BIN_NAME
 
@@ -292,10 +293,12 @@ class AppScanOnCloudSASTBase(Pipe):
         logger.info(f"DATACENTER: {self.datacenter}")
         logger.info(f"SECRET_SCANNING: {self.secret_scanning}")
         logger.info(f"SCAN_SPEED: {self.scan_speed}")
+        logger.info(f"PERSONAL_SCAN: {self.personal_scan}")
         logger.info(f"DEBUG: {self.debug}")
         logger.debug(f"REPO: {self.repo}")
         logger.debug(f"REPO_FULL: {self.repo_full_name}")
         logger.debug(f"BRANCH: {branch}")
+        logger.debug(f"ALLOW_UNTRUSTED: {allow_untrusted}")
         logger.debug(f"COMMIT: {self.commit}")
         logger.debug(f"PROJECT_KEY: {projectKey}")
         logger.debug(f"REPO_OWNER: {self.repoOwner}")
@@ -712,7 +715,7 @@ class AppScanOnCloudSASTBase(Pipe):
             print(f"HTTP request failed: {e}")
             return None
 
-        if(r.status_code != 200):
+        if(r.status_code != HTTP_OK):
             logger.error("Invalid HTTP code downloading SAClient Util")
             return None
 

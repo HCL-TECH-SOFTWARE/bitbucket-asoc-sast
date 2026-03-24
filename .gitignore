@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 run-asoc-scan.ps1
 run-asoc-scan.sh
+
+*.tar
+wss-unified-agent.config

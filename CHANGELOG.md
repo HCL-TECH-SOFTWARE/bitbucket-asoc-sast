@@ -2,11 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## Version 2.0.0 - 2026-03-31
+## Version 2.0.0 - March, 2026
 
 - Added Windows pipe support
 - Added options such as personal scan, scan speed and more
-- Added support for AppScan 360 url
+- Added support for AppScan 360° url
 
 ## Version 1.1.2 - 2024-11-12
 

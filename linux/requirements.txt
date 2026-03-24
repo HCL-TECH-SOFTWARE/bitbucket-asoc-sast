@@ -1,2 +1,2 @@
-bitbucket-pipes-toolkit==3.3.0
-requests
+bitbucket-pipes-toolkit==6.2.0
+requests==2.32.5
