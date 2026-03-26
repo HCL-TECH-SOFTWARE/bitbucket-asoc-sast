@@ -1,4 +1,4 @@
-# Linux AppScan Pipe
+# Linux AppScan pipe
 
 [![Docker](https://img.shields.io/badge/docker-linux-blue.svg)]()
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
@@ -35,7 +35,7 @@ echo "Critical: $CRITICAL_ISSUES, High: $HIGH_ISSUES"
 
 ---
 
-## Self-Hosted Linux (docker run)
+## Self-hosted Linux (docker run)
 
 ```yaml
 - step:
@@ -62,14 +62,14 @@ echo "Critical: $CRITICAL_ISSUES, High: $HIGH_ISSUES"
 
 **Setup notes:**
 - `OUTPUT_DIR` copies reports from container to host path
-- Volume mounts (`-v`) allow container to access source code
-- Results are available on the host after container exits
+- Volume mounts (`-v`) allow the container to access the source code
+- Results are available on the host after the container exits
 
 ---
 
-## Linux-Specific Usage
+## Linux-specific usage
 
-### Using scan_env.sh for Policy Enforcement
+### Using scan_env.sh for policy enforcement
 
 ```bash
 source reports/scan_env.sh
@@ -79,7 +79,7 @@ if [ "$CRITICAL_ISSUES" -gt 0 ]; then
 fi
 ```
 
-### Available Environment Variables
+### Available environment variables
 
 After sourcing `scan_env.sh`:
 
@@ -95,22 +95,20 @@ $INFO_ISSUES           # Informational severity count
 
 ---
 
-## Linux Troubleshooting
+## Linux troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| **Docker not found** | Verify `docker version` works on self-hosted runner |
-| **Volume mount fails** | Check path exists: `ls -la $BITBUCKET_CLONE_DIR` |
-| **Reports missing** | Ensure `WAIT_FOR_ANALYSIS=true` and check container logs |
-| **Permission denied** | Verify Docker daemon can access mounted host paths |
-| **API connection error** | Enable `DEBUG=true` and verify `DATACENTER` setting |
+| **Docker not found** | Verify that `docker version` works on self-hosted runner |
+| **Volume mount fails** | Verify that the path exists: `ls -la $BITBUCKET_CLONE_DIR` |
+| **Reports missing** | Make sure that `WAIT_FOR_ANALYSIS=true`, and check container logs |
+| **Permission denied** | Verify that the Docker daemon can access mounted host paths |
+| **API connection error** | Enable `DEBUG=true`, and verify `DATACENTER` setting |
 
 ---
 
-## Quick Links
+## Quick links
 
-- **Full Documentation:** [README.md](../README.md)
-- **Configuration Variables:** [README.md#configuration-variables](../README.md#configuration-variables)
-- **Windows Guide:** [windows/README.md](../windows/README.md)
-
-
+- **Full documentation:** [README.md](../README.md)
+- **Configuration variables:** [README.md#configuration-variables](../README.md#configuration-variables)
+- **Windows guide:** [windows/README.md](../windows/README.md)

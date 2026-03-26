@@ -1,50 +1,46 @@
-# Bitbucket Pipe for HCL AppScan
+# Bitbucket pipe for HCL AppScan
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)]()
 
-> Seamless Docker-based Bitbucket pipeline integrations for HCL AppScan on Cloud and HCL AppScan 360° with SAST & SCA scanning capabilities.
+> Seamless Docker-based Bitbucket pipeline integrations for HCL AppScan on Cloud and HCL AppScan 360° with SAST and SCA scanning capabilities.
 
 ## Overview
 
-This repository provides production-ready Docker images and pipeline configurations for integrating HCL AppScan security scanning into your Bitbucket CI/CD workflows. Supports both static application security testing (SAST) and software composition analysis (SCA) scans.
+This repository provides production-ready Docker images and pipeline configurations for integrating HCL AppScan security scanning into your Bitbucket CI/CD workflows. It supports both static application security testing (SAST) and software composition analysis (SCA) scans.
 
-### Supported Platforms
+### Supported platforms
 
-| Platform | Runner Type | Execution Method |
+| Platform | Runner type | Execution method |
 |----------|-------------|------------------|
-| **Linux** | Bitbucket Cloud Hosted | `pipe:` syntax |
-| **Linux** | Self-Hosted | `docker run` |
-| **Windows** | Self-Hosted (Windows Containers) | `docker run` |
+| **Linux** | Bitbucket Cloud hosted | `pipe:` syntax |
+| **Linux** | Self-hosted | `docker run` |
+| **Windows** | Self-hosted (Windows containers) | `docker run` |
 
-## Table of Contents
+## Table of contents
 
-- [Quick Start](#quick-start)
-- [Repository Layout](#repository-layout)
-- [Runtime Flow](#runtime-flow)
-- [Configuration Variables](#configuration-variables)
-- [Generated Output](#generated-output)
-- [Usage Examples](#usage-examples)
-- [Viewing Reports](#viewing-reports-in-bitbucket-pipelines)
+- [Quick start](#quick-start)
+- [Repository layout](#repository-layout)
+- [Runtime flow](#runtime-flow)
+- [Configuration variables](#configuration-variables)
+- [Generated output](#generated-output)
+- [Usage examples](#usage-examples)
+- [Viewing rports](#viewing-reports-in-bitbucket-pipelines)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
-## Repository Layout
 
-- `common/` — Shared Python implementation used by both Linux and Windows images
-- `linux/` — Linux Dockerfile, pipe metadata, and Linux-specific wrapper implementation
-- `windows/` — Windows Dockerfile, pipe metadata, and Windows-specific wrapper implementation
 
 ## Quick Start
 
 ### Prerequisites
 
 - Bitbucket repository with pipelines enabled
-- HCL AppScan on Cloud credentials (API Key ID and Secret)
+- HCL AppScan on Cloud credentials (API key ID and secret)
 - Target Application ID in AppScan
 - Docker runtime (self-hosted runners only)
 
-### Basic Linux Example (Bitbucket Cloud)
+### Basic Linux example (Bitbucket Cloud)
 
 ```yaml
 - step:
@@ -64,29 +60,29 @@ For comprehensive setup instructions, see [linux/README.md](linux/README.md) or 
 
 ---
 
-## Repository Layout
+## Repository layout
 
-- `common/`: shared Python implementation used by Linux and Windows images
-- `linux/`: Linux Dockerfile, pipe metadata, and Linux-specific thin wrapper
-- `windows/`: Windows Dockerfile, pipe metadata, and Windows-specific thin wrapper
+- `common/`: Shared Python implementation used by Linux and Windows images.
+- `linux/`: Linux Dockerfile, pipe metadata, and Linux-specific thin wrapper.
+- `windows/`: Windows Dockerfile, pipe metadata, and Windows-specific thin wrapper.
 
-## Runtime Flow
+## Runtime flow
 
 The pipe executes these stages:
-1. Validate inputs and prepare working folders
-2. Download and extract SAClientUtil
-3. Generate IRX from `TARGET_DIR`
-4. Submit scan(s) (SAST, SCA, or both depending on flags)
-5. Optionally wait for completion (`WAIT_FOR_ANALYSIS=true`)
-6. Export results and download HTML reports (only when waiting for completion)
+1. Validate inputs and prepare working folders.
+2. Download and extract SAClientUtil.
+3. Generate IRX from `TARGET_DIR`.
+4. Submit scan(s) (SAST, SCA, or both, depending on flags).
+5. Optionally wait for completion (`WAIT_FOR_ANALYSIS=true`).
+6. Export results and download HTML reports (only when waiting for completion).
 
-If `WAIT_FOR_ANALYSIS=false`, the pipe exits after scan submission and does not generate summary/report files.
+If `WAIT_FOR_ANALYSIS=false`, the pipe exits after scan submission and doesn't generate summary or report files.
 
-## Configuration Variables
+## Configuration variables
 
-All pipeline variables are defined in the schema. Below is the complete reference:
+All pipeline variables are defined in the schema. The following tables provide the complete reference:
 
-### Required Variables
+### Required variables
 
 | Variable | Description |
 |----------|-------------|
@@ -95,35 +91,35 @@ All pipeline variables are defined in the schema. Below is the complete referenc
 | `APP_ID` | Target Application ID in AppScan |
 | `TARGET_DIR` | Directory to package and scan (default: `./`) |
 
-### Optional Variables
+### Optional variables
 
 | Variable | Default | Description |
 |---------|---------|-------------|
-| `SCAN_NAME` | auto-generated | Custom scan name. If empty, auto-generated from repo/app id + timestamp |
+| `SCAN_NAME` | auto-generated | Custom scan name. If empty, auto-generated from repo, app ID, and timestamp |
 | `DATACENTER` | `NA` | AppScan datacenter: `NA`, `EU`, or custom base URL |
-| `CONFIG_FILE_PATH` | empty | Path to AppScan config file (absolute or relative to container working dir) |
-| `SECRET_SCANNING` | `None` | Enables/disables secrets scan mode when supported by SAClient |
-| `STATIC_ANALYSIS_ONLY` | `false` | Run SAST only (cannot be combined with `OPEN_SOURCE_ONLY=true`) |
-| `OPEN_SOURCE_ONLY` | `false` | Run SCA only (cannot be combined with `STATIC_ANALYSIS_ONLY=true`) |
+| `CONFIG_FILE_PATH` | empty | Path to AppScan config file (absolute or relative to container working directory) |
+| `SECRET_SCANNING` | `None` | Enables or disables secrets scan mode when supported by SAClient |
+| `STATIC_ANALYSIS_ONLY` | `false` | Run SAST only (you can’t combine with `OPEN_SOURCE_ONLY=true`) |
+| `OPEN_SOURCE_ONLY` | `false` | Run SCA only (you can't combine this with `STATIC_ANALYSIS_ONLY=true`) |
 | `SCAN_SPEED` | empty | Optional SAClient scan speed value |
 | `PERSONAL_SCAN` | `false` | Create a personal scan |
 | `WAIT_FOR_ANALYSIS` | `true` | Wait for completion and export results |
-| `FAIL_FOR_NONCOMPLIANCE` | `false` | Fail pipeline step when issues at/above threshold exist |
-| `FAILURE_THRESHOLD` | `Low` | Threshold level: `Critical`, `High`, `Medium`, `Low`, `Informational` |
+| `FAIL_FOR_NONCOMPLIANCE` | `false` | Fail pipeline step when issues at or above threshold exist |
+| `FAILURE_THRESHOLD` | `Low` | Threshold level: `Critical`, `High`, `Medium`, `Low`, or `Informational` |
 | `ALLOW_UNTRUSTED` | `false` | Disable TLS certificate validation for API calls (not recommended for production) |
 | `DEBUG` | `false` | Enable debug logging for troubleshooting |
 | `BUILD_NUM` | `0` | Optional build metadata used in report notes |
 | `OUTPUT_DIR` | empty | Additional location to copy generated output files (useful for self-hosted runners) |
 | `REPO` | empty | Reserved for legacy compatibility |
 
-**Important Notes:**
-- Cannot use `STATIC_ANALYSIS_ONLY=true` and `OPEN_SOURCE_ONLY=true` together
-- `OUTPUT_DIR` is particularly useful with self-hosted `docker run` to output reports on a mounted host path
+**Important notes:**
+- You can't use `STATIC_ANALYSIS_ONLY=true` and `OPEN_SOURCE_ONLY=true` together
+- `OUTPUT_DIR` is particularly useful with self-hosted `docker run` to output reports to a mounted host path
 - Avoid using `ALLOW_UNTRUSTED=true` outside controlled test environments
 
-## Generated Output
+## Generated output
 
-When `WAIT_FOR_ANALYSIS=true`, the pipe writes outputs under `reports/` directory (and optionally to `OUTPUT_DIR`).
+When `WAIT_FOR_ANALYSIS=true`, the pipe writes outputs to the `reports/` directory (and optionally to `OUTPUT_DIR`).
 
 ### Output Files
 
@@ -131,7 +127,7 @@ When `WAIT_FOR_ANALYSIS=true`, the pipe writes outputs under `reports/` director
 |------|-------------|
 | `scan_results.txt` | Flat `KEY=VALUE` summary values with all metrics |
 | `scan_env.sh` | Shell exports for use in downstream steps (`source reports/scan_env.sh`) |
-| `report_paths.txt` | Full paths to all generated report and summary files |
+| `report_paths.txt` | Full paths to all generated reports and summary files |
 | `{scanName}_sast.html` | SAST findings as an interactive HTML report (if SAST ran) |
 | `{scanName}_sca.html` | SCA/open-source findings as an interactive HTML report (if SCA ran) |
 | `{scanName}_sast.json` | Raw SAST execution JSON with detailed results (if SAST ran) |
@@ -139,38 +135,38 @@ When `WAIT_FOR_ANALYSIS=true`, the pipe writes outputs under `reports/` director
 | `{scanName}_stdout.txt` | IRX generation stdout capture for debugging |
 | `{scanName}_logs.zip` | SAClient logs archive when generated |
 
-### Exported Output Variables
+### Exported output variables
 
 The following environment variables are set in `scan_env.sh` and `scan_results.txt`:
 
-- **Scan Identifiers:** `SAST_SCAN_ID`, `SCA_SCAN_ID`, `SCAN_NAME`
-- **Scan URLs:** `SAST_SCAN_URL`, `SCA_SCAN_URL` (if scans completed)
-- **Issue Counts:** `TOTAL_ISSUES`, `CRITICAL_ISSUES`, `HIGH_ISSUES`, `MEDIUM_ISSUES`, `LOW_ISSUES`, `INFO_ISSUES`
+- **Scan identifiers:** `SAST_SCAN_ID`, `SCA_SCAN_ID`, and `SCAN_NAME`
+- **Scan URLs:** `SAST_SCAN_URL`, and `SCA_SCAN_URL` (if scans completed)
+- **Issue counts:** `TOTAL_ISSUES`, `CRITICAL_ISSUES`, `HIGH_ISSUES`, `MEDIUM_ISSUES`, `LOW_ISSUES`, and `INFO_ISSUES`
 - **Performance:** `SCAN_DURATION_SECONDS`
 
-## Viewing Reports in Bitbucket Pipelines
+## Viewing reports in Bitbucket Pipelines
 
 When `WAIT_FOR_ANALYSIS=true`, the pipe generates HTML reports, JSON results, and a summary file under `reports/`. To make these accessible in the Bitbucket UI:
 
-1. Declare `artifacts` in the pipeline step that runs the scan (see examples below)
-2. After the pipeline runs, open the step in the Bitbucket Pipelines UI and click the **Artifacts** tab
-3. All files matching `reports/**` will be listed and available for download directly from the browser
+1. Declare `artifacts` in the pipeline step that runs the scan (see examples below).
+2. After the pipeline runs, open the step in the Bitbucket Pipelines UI and click the **Artifacts** tab.
+3. All files matching `reports/**` will be listed and available for download directly from the browser.
 
-### Typical Artifacts Available
+### Typical artifacts available
 
 | Artifact | Contents |
 |----------|----------|
 | `reports/{scanName}_sast.html` | SAST findings as a browsable HTML report |
-| `reports/{scanName}_sca.html` | SCA/open-source findings as a browsable HTML report |
+| `reports/{scanName}_sca.html` | SCA and open-source findings as a browsable HTML report |
 | `reports/scan_results.txt` | Key=Value summary (issue counts, scan IDs, URLs) |
 | `reports/scan_env.sh` | Shell-sourceable exports for use in downstream steps |
 | `reports/report_paths.txt` | Full paths to every generated file |
 
-> **Note:** Artifacts are only produced when `WAIT_FOR_ANALYSIS=true`. If set to `false`, the step exits after submission and no report files are written.
+> **Note:** Artifacts are only produced when `WAIT_FOR_ANALYSIS=true`. If set to `false`, the step exits after submission, and no report files are written.
 
-## Usage Examples
+## Usage examples
 
-### Bitbucket Cloud Example (Linux Hosted)
+### Bitbucket Cloud example (Linux hosted)
 
 ```yaml
 image: node:20.9.0
@@ -221,12 +217,12 @@ pipelines:
             echo "Security thresholds passed. Build continues."
 ```
 
-In the pipeline example above:
-- Build step demonstrates building a Node.js application
-- Scan step executes SAST using the HCL AppScan pipe
-- Final step shows how to enforce security thresholds and fail the build if violated
+In the preceding pipeline example:
+- The build step demonstrates building a Node.js application
+- The scan step executes SAST using the HCL AppScan pipe
+- The final step shows how to enforce security thresholds and fail the build if violated
 
-### Self-Hosted Linux Example (`docker run`)
+### Self-hosted Linux example (`docker run`)
 
 ```yaml
 - step:
@@ -252,13 +248,13 @@ In the pipeline example above:
       - reports/**
 ```
 
-In this self-hosted example:
+In this self-hosted example, the step:
 - Prepares a reports directory
 - Runs the AppScan pipe in a Docker container with all required environment variables
 - Mounts the repository directory so the container can access source code
-- Sources the environment file to access scan results in downstream steps
+- Source the environment file to access scan results in downstream steps
 
-### Self-Hosted Windows Example (`docker run`)
+### Self-hosted Windows example (`docker run`)
 
 ```yaml
 pipelines:
@@ -326,13 +322,13 @@ pipelines:
 ```
 
 In the Windows example:
-- `DOCKER_HOST` environment variable directs Docker commands to the Windows container daemon
-- Volume mounts map host path to container path (`C:\src`), allowing the container to access source code
-- Results are copied from container to host-mounted reports directory for artifact collection
+-  The `DOCKER_HOST` environment variable directs Docker commands to the Windows container daemon.
+- Volume mounts map host path to container path (`C:\src`), allowing the container to access the source code.
+- Results are copied from inside the container to the host-mounted reports directory for artifact collection.
 
 ---
 
-## Bitbucket Cloud Example (Linux Hosted)
+## Bitbucket Cloud example (Linux hosted)
 
 ```yaml
 image: node:20.9.0
@@ -382,14 +378,14 @@ pipelines:
             fi
             echo "Security thresholds passed. Build continues."
 ```
-> In the pipeline example above, the initial step demonstrates building a Node.js application, followed by executing a SAST scan using the HCL AppScan pipe.
+> In the preceding pipeline example, the initial step demonstrates building a Node.js application, followed by executing a SAST scan using the HCL AppScan pipe.
 
-> You can tailor the build step to fit your specific codebase requirements.
+> Customize the build step to fit your codebase requirements.
 
-> The final step, which is optional, illustrates how to leverage the output variables generated by the pipe. In this case, the pipeline is configured to fail if certain issue thresholds are exceeded; however, you may implement any custom logic based on these output values to suit your workflow.
+> The optional final step illustrates how to use the output variables generated by the pipe. In this example, the pipeline is configured to fail if certain issue thresholds are exceeded. Implement custom logic based on these output values to suit your workflow.
 
 
-## Self-Hosted Linux Example (`docker run`)
+## Self-hosted Linux example (`docker run`)
 
 
 ```yaml
@@ -416,14 +412,14 @@ pipelines:
       - reports/**
 ```
 
-> In the self-hosted Linux example above, the scan step prepares a reports directory, then runs the AppScan pipe in a Docker container with all required environment variables and volume mounts.
+> In the preceding self-hosted Linux example, the scan step prepares a reports directory, then runs the AppScan pipe in a Docker container with all required environment variables and volume mounts.
 
 > The scan results and reports are written to the mounted reports directory, making them available to the Bitbucket pipeline as artifacts.
 
-> After the scan, the script sources the environment file and prints the total issues found. You can further customize this step to add logic based on scan results, similar to the Bitbucket Cloud example.
+> After the scan, the script sources the environment file and prints the total issues found. Customize this step further to add logic based on scan results, similar to the Bitbucket Cloud example.
 
 
-## Self-Hosted Windows Example (`docker run`)
+## Self-hosted Windows example (`docker run`)
 
 
 ```yaml
@@ -491,48 +487,48 @@ pipelines:
             Write-Host "Security thresholds passed. Build continues."
 ```
 
-> In the self-hosted Windows example above, the scan step sets up the Docker environment for Windows containers, prepares a reports directory, and runs the AppScan pipe in a Windows container with all necessary environment variables and volume mounts.
+> In the preceding self-hosted Windows example, the scan step sets up the Docker environment for Windows containers, prepares a reports directory, and runs the AppScan pipe in a Windows container with all necessary environment variables and volume mounts.
 
 > The scan results and reports are copied from inside the container to the host-mounted reports directory, making them available as pipeline artifacts.
 
-> After the scan, the script checks the exit code to ensure the scan completed successfully. You can further process the results or add custom logic based on the scan output, similar to the Linux and Bitbucket Cloud examples.
+> After the scan, the script checks the exit code to ensure the scan completed successfully. Process the results further or add custom logic based on the scan output, similar to the Linux and Bitbucket Cloud examples.
 
 > **Windows note:** Because the scan runs inside a Windows container, the `OUTPUT_DIR` variable is used to copy reports from inside the container to the host-mounted volume path (`C:\src\reports` → `$BITBUCKET_CLONE_DIR\reports`). The `artifacts` declaration then picks them up for the Artifacts tab.
 
-## Building and Publishing Images
+## Building and publishing Images
 
 ### Prerequisites
 
-- Docker installed on your system
+- Docker is installed on your system
 - Access to Docker Hub or your preferred container registry
 - Docker Hub account (or registry credentials for private registries)
 
-### Build Linux Image
+### Build the Linux image
 
-Run from repository root:
+Run this command from the repository root:
 
 ```bash
 docker build -f linux/Dockerfile -t <YOUR_REGISTRY>/bitbucket_asoc_sast:linux .
 ```
 
-### Build Windows Image
+### Build the Windows image
 
-Run from repository root (requires Windows host with Windows containers mode):
+Run this command from the repository root (requires a Windows host with Windows containers mode):
 
 ```powershell
 docker build -f windows/Dockerfile -t <YOUR_REGISTRY>/bitbucket_asoc_sast:windows .
 ```
 
-### Push Images to Registry
+### Push images to a registry
 
-First, authenticate with Docker (if not already logged in):
+First, authenticate with Docker if you aren't already signed in:
 
 ```bash
 docker login
 # For other registries (Azure ACR, AWS ECR, etc.), use the registry-specific login
 ```
 
-Push images:
+Push the images:
 
 ```bash
 # Linux
@@ -542,13 +538,13 @@ docker push <YOUR_REGISTRY>/bitbucket_asoc_sast:linux
 docker push <YOUR_REGISTRY>/bitbucket_asoc_sast:windows
 ```
 
-Replace `<YOUR_REGISTRY>` with your Docker Hub username or registry hostname (e.g., `myorg/`, `myregistry.azurecr.io/`, etc.).
+Replace `<YOUR_REGISTRY>` with your Docker Hub username or registry hostname (for example, `myorg/`, `myregistry.azurecr.io/`, etc.).
 
 ---
 
-## Architecture and Implementation
+## Architecture and implementation
 
-### Key Files
+### Key files
 
 | File | Purpose |
 |------|---------|
@@ -557,7 +553,7 @@ Replace `<YOUR_REGISTRY>` with your Docker Hub username or registry hostname (e.
 | `linux/pipe/RunSAST.py` | Linux platform-specific implementation overrides |
 | `windows/pipe/RunSAST.py` | Windows platform-specific implementation overrides |
 
-### Project Structure
+### Project structure
 
 ```
 ├── common/              # Shared implementation
@@ -574,7 +570,7 @@ Replace `<YOUR_REGISTRY>` with your Docker Hub username or registry hostname (e.
 
 ---
 
-## Platform-Specific Guides
+## Platform-specific Guides
 
 For platform-specific information, see:
 
@@ -585,7 +581,7 @@ For platform-specific information, see:
 
 ## Troubleshooting
 
-### Common Issues
+### Common issues
 
 #### Issue: "Unable to connect to AppScan API"
 
@@ -599,29 +595,29 @@ For platform-specific information, see:
 
 #### Issue: "Reports directory not created"
 
-**Cause:** `WAIT_FOR_ANALYSIS=false` (default behavior exits after submission)
+**Cause:** `WAIT_FOR_ANALYSIS=false` (the default behavior exits after submission)
 
 **Solution:** Set `WAIT_FOR_ANALYSIS=true` to wait for scan completion and generate reports
 
 #### Issue: "Target directory not found during scan"
 
-**Cause:** `TARGET_DIR` path doesn't exist or is incorrectly mounted on self-hosted runners
+**Cause:** `TARGET_DIR` path doesn't exist or is mounted incorrectly on self-hosted runners
 
 **Solutions:**
 - Verify `TARGET_DIR` exists before running the scan
-- For self-hosted runners, ensure volume mount includes the correct host path
-- Check that path is specified relative to the container working directory
+- For self-hosted runners, ensure that the volume mount includes the correct host path
+- Check that the path is specified relative to the container working directory
 
 #### Issue: "Docker authentication failed"
 
-**Cause:** Not authenticated with the container registry
+**Cause:** You aren't authenticated with the container registry
 
 **Solutions:**
 - Run `docker login` and provide your Docker Hub credentials
-- For private registries, ensure you have credentials configured properly
-- Check that Docker daemon is running
+- For private registries, ensure that your credentials are configured correctly
+- Check that the Docker daemon is running
 
-### Debug Mode
+### Debug mode
 
 Enable detailed logging by setting `DEBUG=true`:
 
@@ -629,9 +625,9 @@ Enable detailed logging by setting `DEBUG=true`:
 DEBUG: "true"
 ```
 
-This will output verbose logs from SAClient and the pipe implementation, helping identify issues.
+This will output verbose logs from SAClient and the pipe implementation to help identify issues.
 
-### Logs and Artifacts
+### Logs and artifacts
 
 When `WAIT_FOR_ANALYSIS=true`, the pipe generates:
 
@@ -661,7 +657,7 @@ We welcome contributions! To participate:
 
 - Ensure changes are backward compatible when possible
 - Update documentation if behavior changes
-- Test on both Linux and Windows environments before submitting PR
+- Test on both Linux and Windows environments before submitting a PR
 - Include tests or validation steps in the PR description
 
 ---
@@ -677,5 +673,3 @@ We welcome contributions! To participate:
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-

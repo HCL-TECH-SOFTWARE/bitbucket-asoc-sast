@@ -1,4 +1,4 @@
-# Windows AppScan Pipe
+# Windows AppScan pipe
 
 [![Docker](https://img.shields.io/badge/docker-windows-0078d4.svg)]()
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
@@ -11,7 +11,7 @@ For complete documentation, variables, and troubleshooting, see [README.md](../R
 
 ---
 
-## Setup Requirements
+## Setup requirements
 
 - Self-hosted Bitbucket Pipelines runner on Windows
 - Docker configured for **Windows container mode**
@@ -19,7 +19,7 @@ For complete documentation, variables, and troubleshooting, see [README.md](../R
 
 ---
 
-## Self-Hosted Windows (docker run)
+## Self-hosted Windows (docker run)
 
 ```yaml
 - step:
@@ -46,16 +46,16 @@ For complete documentation, variables, and troubleshooting, see [README.md](../R
 ```
 
 **Windows-specific setup:**
-- Set `DOCKER_HOST` to direct Docker to Windows container daemon
-- Map source path to `C:\src` inside container
-- Map reports to `C:\reports` to copy results to host
+- Set `DOCKER_HOST` to direct Docker to the Windows container daemon
+- Map source path to `C:\src` inside the container
+- Map the reports to `C:\reports` to copy results to the host
 - Resolve paths explicitly: `(Resolve-Path $path).Path`
 
 ---
 
-## Windows-Specific Usage
+## Windows-specific usage
 
-### Parsing Results in PowerShell
+### Parse results in PowerShell
 
 ```powershell
 $result = @{}
@@ -69,7 +69,7 @@ Write-Host "Total Issues: $($result.TOTAL_ISSUES)"
 Write-Host "Critical: $($result.CRITICAL_ISSUES)"
 ```
 
-### Policy Enforcement in PowerShell
+### Enforce policies in PowerShell
 
 ```powershell
 $r = Get-Content "$env:BITBUCKET_CLONE_DIR\reports\scan_results.txt" | ConvertFrom-StringData
@@ -84,9 +84,9 @@ if ($critical -gt 10 -or $high -gt 0) {
 
 ---
 
-## Windows-Specific Configuration
+## Windows-specific configuration
 
-| Variable | Windows Note |
+| Variable | Windows note |
 |----------|---|
 | `TARGET_DIR` | Use container path like `C:\src\bin\Release` |
 | `CONFIG_FILE_PATH` | Use container path like `C:\src\appscan-config.xml` |
@@ -95,18 +95,18 @@ if ($critical -gt 10 -or $high -gt 0) {
 
 ---
 
-## Windows Troubleshooting
+## Windows troubleshooting
 
 | Issue | Solution |
 |-------|----------|
 | **Docker uses Linux containers** | Run: `docker info \| findstr "OSType"` — should show `windows` |
-| **Cannot switch to Windows containers** | Right-click Docker icon → Switch to Windows containers → Wait for restart |
+| **Can't switch to Windows containers** | Right-click Docker icon → Switch to Windows containers → Wait for restart |
 | **Volume mount fails** | Verify path exists: `Test-Path C:\your\path` |
 | **Permission denied** | Check NTFS permissions and Docker process access |
 | **Path resolution errors** | Use explicit resolution: `(Resolve-Path $path).Path` |
-| **Reports missing** | Ensure mounted `reports` directory exists and is writable |
+| **Reports missing** | Make sure the mounted `reports` directory exists and is writable |
 
-### Verify Windows Container Setup
+### Verify Windows container setup
 
 ```powershell
 # Check if using Windows containers
@@ -119,8 +119,8 @@ docker run -it -v "C:\windows:C:\test" windows:latest cmd
 
 ---
 
-## Quick Links
+## Quick links
 
-- **Full Documentation:** [README.md](../README.md)
-- **Configuration Variables:** [README.md#configuration-variables](../README.md#configuration-variables)
+- **Full documentation:** [README.md](../README.md)
+- **Configuration variables:** [README.md#configuration-variables](../README.md#configuration-variables)
 - **Linux Guide:** [linux/README.md](../linux/README.md)
