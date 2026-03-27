@@ -1,68 +1,114 @@
-# Bitbucket Pipe for HCL AppScan on Cloud Static Analysis
-This is a linux docker image that uses python to download the SAClientUtil from HCL AppScan on Cloud and run static analysis against an application in Bitbucket pipelines. The script also will wait for the scan to complete and download a scan summary json file and a scan report. These files are all placed in a directory "reports" so they can be saved as artifacts of the pipeline. See the bitbucket-pipelines.yml example below.
+# Linux AppScan pipe
 
-### Variables
+[![Docker](https://img.shields.io/badge/docker-linux-blue.svg)]()
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 
-The pipe has 13 variables.
+> Linux image for HCL AppScan scans in Bitbucket Cloud hosted and self-hosted runners.
 
-| Variable |  Required | Description |
-|---|---|---|
-| API_KEY_ID | Required | The HCL AppScan on Cloud API Key ID |
-| API_KEY_SECRET | Required | The HCL AppScan on Cloud API Key Secret |
-| APP_ID | Required | The application Id of the app in AppScan on Cloud |
-| TARGET_DIR | Required | The directory to be scanned. Place scan targets here. |
-| CONFIG_FILE_PATH | Optional | Relative path from the repo root to an appscan config xml file. |
-| SECRET_SCANNING | Optional | True or False. Enables or disables the secret scanning feature. |
-| REPO | Optional | The Repository name. Only really used to make filenames and comments relevant. |
-| BUILD_NUM | Optional | The Bitbucket build number. Used to make filenames and comments relevant. |
-| SCAN_NAME | Optional | The name of the scan in AppScan on Cloud |
-| DATACENTER | Optional | ASoC Datacenter to connect to: "NA" (default) or "EU", or an AppScan 360 url |
-| DEBUG | Optional | If true, prints additional debug info to the log. |
-| STATIC_ANALYSIS_ONLY | Optional | If true, only prepare for static analysis during IRX generation. |
-| OPEN_SOURCE_ONLY | Optional | If true, only gather opensource information during IRX generation. |
+For complete documentation, variables, and troubleshooting, see [README.md](../README.md).
 
-**Note about specifying a config file. Providing a config file can override other settings like `TARGET_DIR` or `SECRET_SCANNING`
+---
 
-### Example bitbucket-pipelines.yml step
-
-The following is the bitbucket-pipelines.yml file from my demo repository that makes use of this custom pipe.
+## Bitbucket Cloud (pipe: syntax)
 
 ```yaml
-image: gradle:6.6.0
-
-pipelines:
-  default:    
-    - step:
-        name: Build and Test
-        caches:
-          - gradle
-        script:
-          - echo "$BITBUCKET_CLONE_DIR"
-          - cd "AltoroJ 3.1.1"
-          - pwd
-          - ls -la
-          - gradle build
-        artifacts:
-          - AltoroJ 3.1.1/build/libs/altoromutual.war
-        after-script:
-          - pipe: atlassian/checkstyle-report:0.2.0
-    - step:
-        name: ASoC SAST Scan
-        script:
-          # Custom Pipe to run Static Analysis via HCL AppScan on Cloud
-          # View README: https://github.com/cwtravis/bitbucket-asoc-sast-linux
-          - pipe: docker://cwtravis1/bitbucket_asoc_sast:1.0.1
-            variables:
-              # Required Variables
-              API_KEY_ID: $API_KEY_ID
-              API_KEY_SECRET: $API_KEY_SECRET
-              APP_ID: a4696e4a-a3c4-449b-b5e3-327fe05c02c3
-              TARGET_DIR: $BITBUCKET_CLONE_DIR/AltoroJ 3.1.1/build/libs
-              # Optional Variables
-              REPO: $BITBUCKET_REPO_FULL_NAME
-              BUILD_NUM: $BITBUCKET_BUILD_NUMBER
-              SCAN_NAME: "HCL_ASoC_SAST"
-              DEBUG: "false"
-        artifacts:
-          - reports/*
+- step:
+    name: ASoC Scan
+    script:
+      - pipe: docker://cwtravis1/bitbucket_asoc_sast:linux
+        variables:
+          API_KEY_ID: $API_KEY_ID
+          API_KEY_SECRET: $API_KEY_SECRET
+          APP_ID: $APP_ID
+          TARGET_DIR: $BITBUCKET_CLONE_DIR/build
+          WAIT_FOR_ANALYSIS: "true"
+    artifacts:
+      - reports/**
 ```
+
+Access results:
+
+```bash
+source reports/scan_env.sh
+echo "Critical: $CRITICAL_ISSUES, High: $HIGH_ISSUES"
+```
+
+---
+
+## Self-hosted Linux (docker run)
+
+```yaml
+- step:
+    name: ASoC Scan
+    runs-on:
+      - self.hosted
+      - linux.shell
+    script:
+      - mkdir -p "$BITBUCKET_CLONE_DIR/reports"
+      - docker run --rm \
+          -e API_KEY_ID="$API_KEY_ID" \
+          -e API_KEY_SECRET="$API_KEY_SECRET" \
+          -e APP_ID="$APP_ID" \
+          -e TARGET_DIR="$BITBUCKET_CLONE_DIR/build" \
+          -e WAIT_FOR_ANALYSIS="true" \
+          -e OUTPUT_DIR="$BITBUCKET_CLONE_DIR/reports" \
+          -v "$BITBUCKET_CLONE_DIR:$BITBUCKET_CLONE_DIR" \
+          cwtravis1/bitbucket_asoc_sast:linux
+      - source "$BITBUCKET_CLONE_DIR/reports/scan_env.sh"
+      - echo "Total issues: $TOTAL_ISSUES"
+    artifacts:
+      - reports/**
+```
+
+**Setup notes:**
+- `OUTPUT_DIR` copies reports from container to host path
+- Volume mounts (`-v`) allow the container to access the source code
+- Results are available on the host after the container exits
+
+---
+
+## Linux-specific usage
+
+### Using scan_env.sh for policy enforcement
+
+```bash
+source reports/scan_env.sh
+if [ "$CRITICAL_ISSUES" -gt 0 ]; then
+  echo "Critical issues found - failing build"
+  exit 1
+fi
+```
+
+### Available environment variables
+
+After sourcing `scan_env.sh`:
+
+```bash
+$SAST_SCAN_ID          # Scan identifier
+$TOTAL_ISSUES          # Total issues found
+$CRITICAL_ISSUES       # Critical severity count
+$HIGH_ISSUES           # High severity count
+$MEDIUM_ISSUES         # Medium severity count
+$LOW_ISSUES            # Low severity count
+$INFO_ISSUES           # Informational severity count
+```
+
+---
+
+## Linux troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| **Docker not found** | Verify that `docker version` works on self-hosted runner |
+| **Volume mount fails** | Verify that the path exists: `ls -la $BITBUCKET_CLONE_DIR` |
+| **Reports missing** | Make sure that `WAIT_FOR_ANALYSIS=true`, and check container logs |
+| **Permission denied** | Verify that the Docker daemon can access mounted host paths |
+| **API connection error** | Enable `DEBUG=true`, and verify `DATACENTER` setting |
+
+---
+
+## Quick links
+
+- **Full documentation:** [README.md](../README.md)
+- **Configuration variables:** [README.md#configuration-variables](../README.md#configuration-variables)
+- **Windows guide:** [windows/README.md](../windows/README.md)

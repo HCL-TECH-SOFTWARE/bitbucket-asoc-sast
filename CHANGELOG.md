@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.0.0 - March, 2026
+
+- Added Windows pipe support
+- Added new pipeline options: personal scan, scan speed, and failure threshold
+- Enabled simultaneous SAST and SCA scanning
+- Added output variable exports for use in downstream steps
+- Added support for AppScan 360°
+- Enabled report downloads on both self-hosted and cloud runners
+
 ## Version 1.1.2 - 2024-11-12
 
 - Updated linux pipe to work with ASoC v4 APIs.
