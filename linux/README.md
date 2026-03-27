@@ -15,7 +15,7 @@ For complete documentation, variables, and troubleshooting, see [README.md](../R
 - step:
     name: ASoC Scan
     script:
-      - pipe: docker://cwtravis1/bitbucket_asoc_sast:linux
+      - pipe: docker://hclcr.io/appscan/bitbucket:linux-2.0.0
         variables:
           API_KEY_ID: $API_KEY_ID
           API_KEY_SECRET: $API_KEY_SECRET
@@ -53,7 +53,7 @@ echo "Critical: $CRITICAL_ISSUES, High: $HIGH_ISSUES"
           -e WAIT_FOR_ANALYSIS="true" \
           -e OUTPUT_DIR="$BITBUCKET_CLONE_DIR/reports" \
           -v "$BITBUCKET_CLONE_DIR:$BITBUCKET_CLONE_DIR" \
-          cwtravis1/bitbucket_asoc_sast:linux
+          hclcr.io/appscan/bitbucket:linux-2.0.0
       - source "$BITBUCKET_CLONE_DIR/reports/scan_env.sh"
       - echo "Total issues: $TOTAL_ISSUES"
     artifacts:

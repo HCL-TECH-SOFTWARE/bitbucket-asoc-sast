@@ -46,7 +46,7 @@ This repository provides production-ready Docker images and pipeline configurati
 - step:
     name: Security Scan
     script:
-      - pipe: docker://cwtravis1/bitbucket_asoc_sast:linux
+      - pipe: docker://hclcr.io/appscan/bitbucket:linux-2.0.0
         variables:
           API_KEY_ID: $API_KEY_ID
           API_KEY_SECRET: $API_KEY_SECRET
@@ -189,7 +189,7 @@ pipelines:
         name: ASoC SAST Scan
         oidc: true
         script:
-          - pipe: docker://vndpal/bitbucket_asoc_sast:linux-2.0.0
+          - pipe: docker://hclcr.io/appscan/bitbucket:linux-2.0.0
             variables:
               API_KEY_ID: $API_KEY_ID
               API_KEY_SECRET: $API_KEY_SECRET
@@ -241,7 +241,7 @@ In the preceding pipeline example:
           -e WAIT_FOR_ANALYSIS="true" \
           -e OUTPUT_DIR="$BITBUCKET_CLONE_DIR/reports" \
           -v "$BITBUCKET_CLONE_DIR:$BITBUCKET_CLONE_DIR" \
-          cwtravis1/bitbucket_asoc_sast:linux-2.0.0
+          hclcr.io/appscan/bitbucket:linux-2.0.0
       - source "$BITBUCKET_CLONE_DIR/reports/scan_env.sh"
       - echo "Total issues: $TOTAL_ISSUES"
     artifacts:
@@ -295,7 +295,7 @@ pipelines:
               -e WAIT_FOR_ANALYSIS="true" `
               -e DEBUG="true" `
               -e BITBUCKET_REPO_SLUG=$env:BITBUCKET_REPO_SLUG `
-              vndpal/bitbucket_asoc_sast:windows-after-mend-scan-1
+              hclcr.io/appscan/bitbucket:windows-2.0.0
           - $SCAN_EXIT = $LASTEXITCODE
           - $ErrorActionPreference = "Stop"
           - if ($SCAN_EXIT -ne 0) { exit $SCAN_EXIT }
@@ -351,7 +351,7 @@ pipelines:
         name: ASoC SAST Scan
         oidc: true
         script:
-          - pipe: docker://vndpal/bitbucket_asoc_sast:linux-2.0.0
+          - pipe: docker://hclcr.io/appscan/bitbucket:linux-2.0.0
             variables:
               API_KEY_ID: $API_KEY_ID
               API_KEY_SECRET: $API_KEY_SECRET
@@ -405,7 +405,7 @@ pipelines:
           -e WAIT_FOR_ANALYSIS="true" \
           -e OUTPUT_DIR="$BITBUCKET_CLONE_DIR/reports" \
           -v "$BITBUCKET_CLONE_DIR:$BITBUCKET_CLONE_DIR" \
-          cwtravis1/bitbucket_asoc_sast:linux-2.0.0
+          hclcr.io/appscan/bitbucket:linux-2.0.0
       - source "$BITBUCKET_CLONE_DIR/reports/scan_env.sh"
       - echo "Total issues: $TOTAL_ISSUES"
     artifacts:
@@ -461,7 +461,7 @@ pipelines:
               -e WAIT_FOR_ANALYSIS="true" `
               -e DEBUG="true" `
               -e BITBUCKET_REPO_SLUG=$env:BITBUCKET_REPO_SLUG `
-              vndpal/bitbucket_asoc_sast:windows-after-mend-scan-1
+              hclcr.io/appscan/bitbucket:windows-2.0.0
           - $SCAN_EXIT = $LASTEXITCODE
           - $ErrorActionPreference = "Stop"
           - if ($SCAN_EXIT -ne 0) { exit $SCAN_EXIT }
