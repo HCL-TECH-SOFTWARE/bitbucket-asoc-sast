@@ -107,7 +107,7 @@ All pipeline variables are defined in the schema. The following tables provide t
 | `WAIT_FOR_ANALYSIS` | `true` | Wait for completion and export results |
 | `FAIL_FOR_NONCOMPLIANCE` | `false` | Fail pipeline step when issues at or above threshold exist |
 | `FAILURE_THRESHOLD` | `Low` | Threshold level: `Critical`, `High`, `Medium`, `Low`, or `Informational` |
-| `ALLOW_UNTRUSTED` | `false` | Disable TLS certificate validation for API calls (not recommended for production) for HCL AppScan 360° |
+| `ALLOW_UNTRUSTED` | `false` | Disable TLS certificate validation for API calls for HCL AppScan 360°. Recommended for testing purposes only |
 | `DEBUG` | `false` | Enable debug logging for troubleshooting |
 | `BUILD_NUM` | `0` | Optional build metadata used in report notes |
 | `OUTPUT_DIR` | empty | Additional location to copy generated output files (useful for self-hosted runners) |
