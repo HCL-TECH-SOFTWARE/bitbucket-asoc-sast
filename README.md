@@ -26,6 +26,7 @@ This repository provides production-ready Docker images and pipeline configurati
 - [Generated output](#generated-output)
 - [Usage examples](#usage-examples)
 - [Viewing rports](#viewing-reports-in-bitbucket-pipelines)
+- [Windows image OS compatibility](#windows-image-os-compatibility)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
@@ -494,6 +495,40 @@ pipelines:
 > After the scan, the script checks the exit code to ensure the scan completed successfully. Process the results further or add custom logic based on the scan output, similar to the Linux and Bitbucket Cloud examples.
 
 > **Windows note:** Because the scan runs inside a Windows container, the `OUTPUT_DIR` variable is used to copy reports from inside the container to the host-mounted volume path (`C:\src\reports` → `$BITBUCKET_CLONE_DIR\reports`). The `artifacts` declaration then picks them up for the Artifacts tab.
+
+---
+
+## Windows image OS compatibility
+
+The pre-built image `hclcr.io/appscan/bitbucket:windows-2.0.0` is based on **Windows Server 2025** (Windows Server Core LTSC 2025). Windows containers running in the default process isolation mode require the container image OS version to match the host Windows kernel version exactly. Running this image on an older Windows Server host will produce a runtime error.
+
+### Supported host operating systems
+
+| Host OS | Pre-built image support |
+|---------|------------------------|
+| Windows Server 2025 | Supported |
+| Windows Server 2022 | Not supported — build a custom image (see below) |
+| Windows Server 2019 | Not supported — build a custom image (see below) |
+
+> **Note:** Hyper-V isolation can work around the version mismatch requirement when your host supports it, but requires additional configuration, appropriate hardware, and a compatible Windows edition. See [Windows container version compatibility](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility) for details.
+
+### Building for an older Windows Server version
+
+If your self-hosted runner host runs **Windows Server 2022** or **Windows Server 2019**, you must build a custom image from a matching base OS. Open [windows/Dockerfile](windows/Dockerfile) and replace the `FROM` line with the base image that corresponds to your host OS:
+
+**Windows Server 2022:**
+```dockerfile
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
+```
+
+**Windows Server 2019:**
+```dockerfile
+FROM mcr.microsoft.com/windows/servercore:ltsc2019
+```
+
+Then follow the steps in [Building and publishing Images](#building-and-publishing-images) to build and push your custom image, and replace `hclcr.io/appscan/bitbucket:windows-2.0.0` with your custom image tag wherever it appears in your pipeline configuration.
+
+---
 
 ## Building and publishing Images
 
