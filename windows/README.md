@@ -39,7 +39,7 @@ For complete documentation, variables, and troubleshooting, see [README.md](../R
           -e APP_ID=$env:APP_ID `
           -e TARGET_DIR="C:\src\bin\Release" `
           -e WAIT_FOR_ANALYSIS="true" `
-          vndpal/bitbucket_asoc_sast:windows
+          hclcr.io/appscan/bitbucket:windows-2.0.0
       - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     artifacts:
       - reports/*
