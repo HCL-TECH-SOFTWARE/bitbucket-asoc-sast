@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Version 2.0.0 - March, 2026
+## Version 2.0.0 - 2026-03
 
 - Added Windows pipe support
 - Added new pipeline options: personal scan, scan speed, and failure threshold
