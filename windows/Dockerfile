@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:9.0-windowsservercore-ltsc2025
+FROM mcr.microsoft.com/dotnet/sdk:9.0-windowsservercore-ltsc2022
 
 RUN powershell -Command (Get-WMIObject win32_operatingsystem).name
 
@@ -8,7 +8,7 @@ RUN powershell -Command " \
     Invoke-WebRequest -Uri https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe -OutFile python-installer.exe; \
     Start-Process python-installer.exe -ArgumentList '/quiet InstallAllUsers=1 PrependPath=1' -Wait; \
     Remove-Item python-installer.exe \
-"
+    "
 
 # Upgrade setuptools and pip to remediate HIGH CVEs (CVE-2024-6345, CVE-2025-47273)
 RUN python -m pip install --upgrade "setuptools>=78.1.1" pip
