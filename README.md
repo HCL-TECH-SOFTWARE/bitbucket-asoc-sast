@@ -18,7 +18,9 @@ This repository provides production-ready Docker images and pipeline configurati
 | **Windows** | Self-hosted (Windows containers) | `docker run` |
 
 
-> **Note:** HCL AppScan 360° requires self-hosted runners and is not supported on Bitbucket Cloud hosted runners; HCL AppScan on Cloud is supported on both Bitbucket Cloud hosted and self-hosted runners.
+> **Note:**
+> - HCL AppScan 360° requires self-hosted runners (not supported on Bitbucket Cloud hosted runners).
+> - HCL AppScan on Cloud is supported on both Bitbucket Cloud hosted and self-hosted runners.
 
 ## Table of contents
 
