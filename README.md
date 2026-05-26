@@ -17,6 +17,9 @@ This repository provides production-ready Docker images and pipeline configurati
 | **Linux** | Self-hosted | `docker run` |
 | **Windows** | Self-hosted (Windows containers) | `docker run` |
 
+
+> **Note:** HCL AppScan 360° requires self-hosted runners and is not supported on Bitbucket Cloud hosted runners; HCL AppScan on Cloud is supported on both Bitbucket Cloud hosted and self-hosted runners.
+
 ## Table of contents
 
 - [Quick start](#quick-start)
@@ -40,6 +43,7 @@ This repository provides production-ready Docker images and pipeline configurati
 - HCL AppScan on Cloud or HCL AppScan 360° credentials (API key ID and secret)
 - Target Application ID in AppScan
 - Docker runtime (self-hosted runners only)
+ 
 
 ### Basic Linux example (Bitbucket Cloud)
 
